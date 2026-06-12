@@ -1,0 +1,2784 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VNCars — Nền tảng Thuê xe Trực tuyến</title>
+    <meta name="description" content="Thuê xe nhanh chóng, giá cả hợp lý, thủ tục minh bạch. Nền tảng thuê xe tự lái và có tài xế hàng đầu Việt Nam.">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="leaflet/leaflet.css" id="leaflet-css"/>
+    <script>
+        if (!document.getElementById('leaflet-css') || !document.getElementById('leaflet-css').sheet) {
+            var link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+            document.head.appendChild(link);
+        }
+    
+
+
+</script>
+    <style>
+        :root {
+            --primary: #1a56db;
+            --primary-dark: #1e429f;
+            --primary-light: #ebf0ff;
+            --accent: #f97316;
+            --accent-light: #fff7ed;
+            --green: #16a34a;
+            --green-light: #dcfce7;
+            --red: #dc2626;
+            --red-light: #fef2f2;
+            --orange: #ea580c;
+            --cyan: #0891b2;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text: #0f172a;
+            --text-2: #475569;
+            --text-3: #94a3b8;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+            --radius: 12px;
+            --radius-lg: 16px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+        a { color: inherit; text-decoration: none; }
+
+        /* === NAVBAR === */
+                nav {
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            gap: 0;
+            height: 60px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .nav-logo {
+            cursor: pointer;
+            margin-right: 32px;
+            white-space: nowrap;
+            font-weight: 800;
+            font-size: 18px;
+            color: var(--primary);
+        }
+        .nav-links {
+            display: flex;
+            gap: 4px;
+            flex: 1;
+        }
+        .nav-link {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-2);
+            cursor: pointer;
+            transition: all 0.15s;
+            border: none;
+            background: none;
+        }
+        .nav-link:hover { background: var(--bg); color: var(--text); }
+        .nav-link.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+        .nav-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-left: auto;
+        }
+        .nav-user-info {
+            font-size: 13px;
+            color: var(--text-2);
+        }
+        .nav-user-info strong { color: var(--text); }
+        .btn-nav { padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all 0.15s; }
+        .btn-nav-outline { background: none; border: 1px solid var(--border); color: var(--text); }
+        .btn-nav-outline:hover { border-color: var(--primary); color: var(--primary); }
+        .btn-nav-primary { background: var(--primary); color: #fff; }
+        .btn-nav-primary:hover { background: var(--primary-dark); }
+
+        /* === MAIN CONTENT === */
+        .main-content { max-width: 1200px; margin: 0 auto; padding: 24px 24px 80px; }
+
+        /* === SECTIONS === */
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+
+        /* === HERO === */
+        .hero {
+            background: linear-gradient(135deg, var(--primary) 0%, #3b82f6 50%, #0891b2 100%);
+            border-radius: var(--radius-lg);
+            padding: 48px 40px 40px;
+            color: #fff;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50px; right: -50px;
+            width: 300px; height: 300px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 50%;
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -80px; left: -30px;
+            width: 200px; height: 200px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 50%;
+        }
+        .hero h1 { font-size: 32px; font-weight: 800; margin-bottom: 8px; line-height: 1.2; }
+        .hero p { font-size: 15px; opacity: 0.85; margin-bottom: 28px; }
+        .hero-stats {
+            display: flex; gap: 32px; margin-bottom: 32px;
+        }
+        .hero-stat { }
+        .hero-stat .num { font-size: 24px; font-weight: 800; }
+        .hero-stat .lbl { font-size: 12px; opacity: 0.75; }
+
+        /* === SEARCH FORM === */
+        .search-form {
+            background: #fff;
+            border-radius: var(--radius);
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 12px;
+            align-items: end;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            z-index: 1;
+        }
+        .search-field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .search-field input, .search-field select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text);
+            background: #fff;
+            transition: border-color 0.15s;
+        }
+        .search-field input:focus, .search-field select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+        }
+        .btn-search {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s;
+            font-family: inherit;
+            height: 42px;
+        }
+        .btn-search:hover { background: var(--primary-dark); transform: translateY(-1px); }
+
+        /* === FILTER BAR === */
+        .filter-section {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        .filter-label { font-size: 13px; font-weight: 600; color: var(--text-2); white-space: nowrap; }
+        .filter-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .filter-chip {
+            padding: 5px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: #fff;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            color: var(--text-2);
+            transition: all 0.15s;
+        }
+        .filter-chip:hover { border-color: var(--primary); color: var(--primary); }
+        .filter-chip.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .filter-select {
+            padding: 6px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            color: var(--text);
+            background: #fff;
+            cursor: pointer;
+        }
+        .results-count { margin-left: auto; font-size: 13px; color: var(--text-2); white-space: nowrap; }
+
+        /* === CAR GRID === */
+        .car-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        /* === CAR CARD === */
+        .car-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow);
+            position: relative;
+        }
+        .car-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary);
+        }
+        .car-image-wrap {
+            position: relative;
+            height: 200px;
+            overflow: hidden;
+        }
+        .car-image-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        .car-card:hover .car-image-wrap img {
+            transform: scale(1.05);
+        }
+        .car-status-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            z-index: 2;
+            backdrop-filter: blur(4px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .badge-available { background: rgba(22, 163, 74, 0.9); color: #fff; }
+        .badge-rented { background: rgba(220, 38, 38, 0.9); color: #fff; }
+        .car-info {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }
+        .car-model {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text);
+            line-height: 1.3;
+        }
+        .car-price {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--primary);
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+        .car-price span {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-3);
+        }
+        .car-specs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: auto;
+        }
+        .spec-badge {
+            background: var(--bg);
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-2);
+            border: 1px solid var(--border);
+        }
+        .car-rating {
+            font-size: 13px;
+            color: var(--orange);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .car-rating span {
+            color: var(--text-3);
+            font-weight: 400;
+        }
+        .badge-pending { background: #fef3c7; color: #d97706; }
+        .badge-myrented { background: #eff6ff; color: #3b82f6; }
+        .car-card.my-rented {
+            border: 2px solid #3b82f6;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+        .car-category-tag {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            background: rgba(255,255,255,0.92);
+            color: var(--text-2);
+        }
+        .car-body { padding: 16px; }
+        .car-name { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+        .car-year { font-size: 12px; color: var(--text-3); margin-bottom: 8px; }
+        .car-rating {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 10px;
+            font-size: 13px;
+        }
+        .stars { color: #f59e0b; font-size: 12px; }
+        .rating-num { font-weight: 600; color: var(--text); }
+        .review-cnt { color: var(--text-3); font-size: 12px; }
+        .car-specs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .spec-tag {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: var(--text-2);
+        }
+        .spec-icon { font-size: 13px; }
+        .car-features {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .feature-tag {
+            font-size: 11px;
+            padding: 2px 8px;
+            background: var(--primary-light);
+            color: var(--primary);
+            border-radius: 4px;
+            font-weight: 500;
+        }
+        .car-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .car-price .amount { font-size: 20px; font-weight: 800; color: var(--primary); }
+        .car-price .unit { font-size: 12px; color: var(--text-3); }
+        .btn-rent {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 9px 18px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.15s;
+        }
+        .btn-rent:hover { background: var(--primary-dark); }
+        .btn-rent:disabled { background: var(--border); color: var(--text-3); cursor: not-allowed; }
+        .btn-return { background: #fee2e2; color: var(--red); border: none; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
+        /* === SECTION 2: GPS === */
+        .gps-layout { display: grid; grid-template-columns: 1fr 280px; gap: 20px; }
+        .gps-map-wrap {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            position: relative;
+            min-height: 460px;
+        }
+        #gps-map { width: 100%; height: 460px; }
+        #client-fallback-canvas-wrapper { display: none; width: 100%; height: 460px; }
+        #fallback-canvas { width: 100%; height: 100%; display: block; }
+        .map-badge {
+            position: absolute; top: 12px; left: 12px; z-index: 1000;
+            font-size: 11px; font-weight: 700; padding: 4px 12px;
+            border-radius: 20px; background: rgba(255,255,255,0.95);
+            border: 1px solid rgba(22,163,74,0.4); color: var(--green);
+            font-family: monospace;
+        }
+        .map-controls {
+            position: absolute; top: 44px; left: 12px; z-index: 1000;
+            display: flex; gap: 4px; flex-wrap: wrap;
+        }
+        .map-btn {
+            font-size: 11px; padding: 4px 10px; border-radius: 8px;
+            background: rgba(255,255,255,0.95); border: 1px solid var(--border);
+            color: var(--text); cursor: pointer; font-weight: 600; font-family: 'Inter',sans-serif;
+        }
+        .waypoint-bar {
+            position: absolute; top: 12px; right: 12px; z-index: 1000;
+            font-size: 11px; padding: 5px 12px; border-radius: 20px;
+            background: rgba(255,255,255,0.95); border: 1px solid var(--border);
+            font-family: monospace; max-width: 200px;
+        }
+        .enc-badge {
+            position: absolute; bottom: 36px; left: 12px; z-index: 1000;
+            font-size: 10px; padding: 3px 10px; border-radius: 20px;
+            background: rgba(255,255,255,0.9); border: 1px solid var(--border);
+            color: var(--text-2); font-family: monospace;
+        }
+        #tamper-overlay {
+            display: none; position: absolute; inset: 0; background: rgba(220,38,38,0.08);
+            border: 3px solid var(--red); border-radius: var(--radius-lg);
+            flex-direction: column; align-items: center; justify-content: center;
+            gap: 10px; z-index: 2000;
+        }
+        #engine-locked-overlay {
+            display: none; position: absolute; inset: 0; background: rgba(234,88,12,0.05);
+            border: 2px solid var(--orange); border-radius: var(--radius-lg);
+            flex-direction: column; align-items: center; justify-content: center;
+            gap: 8px; z-index: 1500;
+        }
+
+        .gps-sidebar { display: flex; flex-direction: column; gap: 12px; }
+
+        /* === CARD (info panel) === */
+        .panel {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+        .panel-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-2);
+            margin-bottom: 10px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #f8fafc;
+            font-size: 13px;
+        }
+        .info-row label { color: var(--text-2); }
+        .info-row span { font-weight: 500; color: var(--text); }
+
+        /* === GPS CONTROLS PANEL === */
+        .ctrl-btn {
+            width: 100%;
+            padding: 9px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            font-family: inherit;
+            transition: all 0.15s;
+            margin-bottom: 6px;
+        }
+        .ctrl-btn:last-child { margin-bottom: 0; }
+        .ctrl-btn-green { background: var(--green-light); color: var(--green); border-color: rgba(22,163,74,0.3); }
+        .ctrl-btn-red { background: var(--red-light); color: var(--red); border-color: rgba(220,38,38,0.3); }
+        .ctrl-btn-blue { background: var(--primary-light); color: var(--primary); border-color: rgba(26,86,219,0.3); }
+        .ctrl-btn-orange { background: var(--accent-light); color: var(--orange); border-color: rgba(234,88,12,0.3); }
+        .ctrl-btn-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+        .ctrl-btn-pair .ctrl-btn { margin-bottom: 0; }
+        .geofence-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+        .geofence-input { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; }
+
+        /* === TRIP LIMIT === */
+        .trip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .trip-input-wrap { margin-bottom: 0; }
+        .trip-input-wrap label { font-size: 11px; color: var(--text-2); display: block; margin-bottom: 3px; }
+        .trip-input-wrap input { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; }
+        .trip-status-box {
+            display: none;
+            margin-top: 8px; padding: 10px; background: #fff7ed;
+            border: 1px solid #ffedd5; border-radius: 8px; font-size: 12px;
+        }
+        #wifi-panel { display: none; }
+
+        /* === SECTION 3: HISTORY === */
+        .rental-history-grid { display: flex; flex-direction: column; gap: 12px; }
+        .rental-history-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            display: grid;
+            grid-template-columns: 80px 1fr auto;
+            gap: 16px;
+            align-items: center;
+        }
+        .rental-car-img {
+            width: 80px; height: 56px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: var(--bg);
+        }
+        .rental-info .model { font-size: 15px; font-weight: 700; margin-bottom: 3px; }
+        .rental-info .plate { font-size: 12px; color: var(--text-3); font-family: monospace; margin-bottom: 4px; }
+        .rental-info .dates { font-size: 12px; color: var(--text-2); }
+        .rental-info .loc { font-size: 12px; color: var(--text-2); }
+        .rental-right { text-align: right; }
+        .rental-amount { font-size: 18px; font-weight: 800; color: var(--primary); }
+        .rental-status {
+            display: inline-block;
+            padding: 3px 10px; border-radius: 20px;
+            font-size: 11px; font-weight: 700; margin-bottom: 8px;
+        }
+        .status-active { background: var(--green-light); color: var(--green); }
+        .status-terminated { background: #f1f5f9; color: var(--text-3); }
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .btn-review {
+            font-size: 12px; padding: 5px 12px; border-radius: 8px;
+            border: 1px solid var(--border); background: #fff; cursor: pointer;
+            font-family: inherit; color: var(--text-2);
+        }
+        .btn-review:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* === SECTION 4: PROFILE === */
+        .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text);
+            transition: border-color 0.15s;
+        }
+        .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+        .btn-save {
+            background: var(--primary); color: #fff; border: none; border-radius: 8px;
+            padding: 10px 24px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+        }
+        .btn-save:hover { background: var(--primary-dark); }
+        .alert { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; display: none; }
+        .alert-error { background: var(--red-light); color: var(--red); border: 1px solid #fecaca; }
+        .alert-success { background: var(--green-light); color: var(--green); border: 1px solid #bbf7d0; }
+        .section-title { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 4px; }
+        .section-sub { font-size: 14px; color: var(--text-2); margin-bottom: 20px; }
+
+        /* === CONSOLE === */
+        .api-console {
+            background: #0f172a;
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            height: 100px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            margin-top: 16px;
+            color: #94a3b8;
+        }
+        .c-line { padding: 1px 0; line-height: 1.5; }
+        .c-req { color: #60a5fa; }
+        .c-res { color: #4ade80; }
+        .c-err { color: #f87171; }
+
+        /* === VIPR OVERLAY === */
+        .vipr-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .vipr-inner {
+            background: #fff; border-radius: var(--radius-lg); padding: 40px;
+            text-align: center; max-width: 360px;
+        }
+        .loader-ring {
+            width: 48px; height: 48px; border: 4px solid var(--border);
+            border-top-color: var(--red); border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin: 0 auto 16px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* === MODAL === */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.4); z-index: 500;
+            align-items: center; justify-content: center;
+        }
+        .modal-card {
+            background: #fff; border-radius: var(--radius-lg);
+            padding: 28px; width: 480px; max-width: calc(100vw - 32px);
+            box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto;
+        }
+        .modal-title { font-size: 18px; font-weight: 800; margin-bottom: 20px; }
+        .modal-img { width: 100%; height: 200px; object-fit: cover; border-radius: 10px; margin-bottom: 16px; }
+        .spec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+        .spec-item label { font-size: 11px; color: var(--text-3); display: block; }
+        .spec-item span { font-size: 14px; font-weight: 600; }
+        .spec-item.full { grid-column: span 2; }
+        .modal-desc { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-bottom: 16px; }
+        .modal-features { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+        .book-date-form {
+            background: var(--bg);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .book-date-form .bdg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .book-date-form label { font-size: 12px; font-weight: 600; color: var(--text-2); display: block; margin-bottom: 4px; }
+        .book-date-form input, .book-date-form select {
+            width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+            font-size: 13px; font-family: inherit;
+        }
+        .price-summary {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 10px 14px; background: var(--primary-light);
+            border-radius: 8px; margin-bottom: 14px;
+        }
+        .price-summary .label { font-size: 13px; color: var(--primary); font-weight: 600; }
+        .price-summary .total { font-size: 20px; font-weight: 800; color: var(--primary); }
+        .modal-actions { display: flex; flex-direction: column; gap: 8px; }
+        .modal-actions .btn-rent { width: 100%; padding: 12px; font-size: 14px; }
+        .modal-actions .btn-secondary {
+            width: 100%; padding: 10px; font-size: 13px; font-weight: 600;
+            border: 1px solid var(--border); background: #fff; border-radius: 8px; cursor: pointer; font-family: inherit;
+        }
+
+        /* === REVIEW MODAL === */
+        .star-picker { display: flex; gap: 6px; margin-bottom: 12px; }
+        .star-btn {
+            font-size: 24px; cursor: pointer; background: none; border: none;
+            color: #d1d5db; transition: color 0.15s; padding: 0;
+        }
+        .star-btn.active, .star-btn:hover ~ .star-btn, .star-btn:hover { color: #f59e0b; }
+
+        /* === LICENSE SECTION === */
+        .license-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .license-table th { text-align: left; padding: 8px 12px; background: var(--bg); color: var(--text-2); font-weight: 600; }
+        .license-table td { padding: 8px 12px; border-top: 1px solid var(--border); font-family: monospace; }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 900px) {
+            .search-form { grid-template-columns: 1fr 1fr; }
+            .gps-layout { grid-template-columns: 1fr; }
+            .profile-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .search-form { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 24px; }
+            .rental-history-card { grid-template-columns: 1fr; }
+        }
+
+        /* === TOAST NOTIFICATION === */
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: none;
+        }
+        .toast {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 18px;
+            box-shadow: var(--shadow-lg);
+            font-size: 13px;
+            font-weight: 500;
+            max-width: 340px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            pointer-events: auto;
+            animation: slideInRight 0.25s ease;
+        }
+        .toast-success { border-left: 4px solid var(--green); }
+        .toast-error { border-left: 4px solid var(--red); }
+        .toast-info { border-left: 4px solid var(--primary); }
+        .toast-warn { border-left: 4px solid var(--orange); }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(24px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    </style>
+</head>
+<body>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<!-- NAVBAR -->
+<nav>
+    <div class="nav-logo" onclick="switchView('sec-1')">VNCars</div>
+    <div class="nav-links">
+        <button class="nav-link active" onclick="switchView('sec-1')" id="link-1" data-section="sec-1">Thuê xe</button>
+        <button class="nav-link user-btn" onclick="openMyActiveRental()" id="link-rented" style="display:none; color:var(--red); font-weight:700;">Đang thuê</button>
+        <button class="nav-link user-btn" onclick="switchView('sec-3')" id="link-3" data-section="sec-3" style="display:none;">Lịch sử</button>
+        <button class="nav-link user-btn" onclick="switchView('sec-4')" id="link-4" data-section="sec-4" style="display:none;">Hồ sơ</button>
+        <button class="nav-link user-btn" onclick="switchView('sec-5')" id="link-5" data-section="sec-5" style="display:none;">Bằng lái</button>
+        <button class="nav-link user-btn" onclick="openMyOwnedVehicle()" id="link-owned" style="display:none;">Xe của tôi</button>
+        <button class="nav-link user-btn" onclick="switchView('sec-6')" id="link-6" data-section="sec-6" style="display:none;">Cài đặt</button>
+    </div>
+    <div class="nav-right">
+        <div class="nav-user-info user-btn" id="nav-user" style="display:none;">
+            Xin chào, <strong id="username-display">User</strong>
+            <span style="margin-left:8px; font-size:11px; padding:2px 8px; background:var(--primary-light); color:var(--primary); border-radius:10px; font-weight:700;" id="role-display">User</span>
+        </div>
+        <button class="btn-nav btn-nav-outline auth-btn" id="btn-register" onclick="showRegisterModal()">Đăng ký</button>
+        <button class="btn-nav btn-nav-primary auth-btn" id="btn-login" onclick="showLoginModal()">Đăng nhập</button>
+        <button class="btn-nav btn-nav-outline user-btn" id="btn-logout" style="display:none;" onclick="handleLogout()">Thoát</button>
+    </div>
+</nav>
+
+<div class="main-content">
+
+<!-- ============================================================ -->
+<!-- SECTION 1: FLEET / SEARCH -->
+<!-- ============================================================ -->
+<div class="view-section active" id="sec-1">
+
+    <!-- Hero -->
+    <div class="hero">
+        <h1>Thuê xe nhanh, an toàn, giá tốt</h1>
+        <p>Đội xe đa dạng — Đặt xe trong 60 giây — Bảo mật đa lớp VNCars</p>
+        <div class="hero-stats">
+            <div class="hero-stat"><div class="num">8+</div><div class="lbl">Dòng xe</div></div>
+            <div class="hero-stat"><div class="num">24/7</div><div class="lbl">Hỗ trợ</div></div>
+            <div class="hero-stat"><div class="num">100%</div><div class="lbl">Bảo hiểm</div></div>
+        </div>
+
+        <!-- Search Form -->
+        <div class="search-form">
+            <div class="search-field">
+                <label>Địa điểm nhận xe</label>
+                <select id="pickup-location">
+                    <option value="Ha Noi">Hà Nội</option>
+                    <option value="Ho Chi Minh">Hồ Chí Minh</option>
+                    <option value="Da Nang">Đà Nẵng</option>
+                    <option value="Hai Phong">Hải Phòng</option>
+                </select>
+            </div>
+            <div class="search-field">
+                <label>Ngày nhận xe</label>
+                <input type="date" id="search-start-date">
+            </div>
+            <div class="search-field">
+                <label>Ngày trả xe</label>
+                <input type="date" id="search-end-date">
+            </div>
+            <button class="btn-search" onclick="doSearch()">Tìm xe</button>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-section">
+        <span class="filter-label">Loại xe:</span>
+        <div class="filter-chips" id="category-chips">
+            <button class="filter-chip active" data-cat="0" onclick="filterByCategory(0,this)">Tất cả</button>
+        </div>
+        <div style="margin-left:16px; display:flex; gap:8px; align-items:center;">
+            <select class="filter-select" id="filter-transmission" onchange="applyFilters()">
+                <option value="all">Hộp số (Tất cả)</option>
+                <option value="Auto">Tự động</option>
+                <option value="Manual">Số sàn</option>
+            </select>
+            <select class="filter-select" id="filter-fuel" onchange="applyFilters()">
+                <option value="all">Nhiên liệu (Tất cả)</option>
+                <option value="Petrol">Xăng</option>
+                <option value="Diesel">Dầu</option>
+                <option value="Electric">Điện</option>
+            </select>
+            <select class="filter-select" id="filter-price" onchange="applyFilters()">
+                <option value="">Giá (Tất cả)</option>
+                <option value="700000">Dưới 700k/ngày</option>
+                <option value="1000000">Dưới 1tr/ngày</option>
+                <option value="1500000">Dưới 1.5tr/ngày</option>
+            </select>
+        </div>
+        <span class="results-count" id="results-count"></span>
+    </div>
+
+    
+
+    
+
+    
+    <!-- Car Grid -->
+    <div class="car-grid" id="fleet-container">
+        <div style="grid-column:span 3; text-align:center; padding:60px 0; color:var(--text-3);">
+            Đang tải danh sách xe...
+        </div>
+    </div>
+    <!-- Console -->
+    <div class="api-console" id="console-box">
+        <div class="c-line">[SYSTEM] VNCars Portal san sang...</div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION MAP: FLEET MAP -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- SECTION 2: RESERVED -->
+<!-- ============================================================ -->
+
+<!-- ============================================================ -->
+<!-- SECTION 2: GPS TRACKING -->
+<!-- ============================================================ -->
+<div class="view-section" id="sec-2" style="display:none;">
+    <div class="section-title">Theo dõi xe GPS</div>
+    <div class="section-sub">Vị trí thực tế, mã hóa AES-256-GCM + Định vị dự phòng Dead Reckoning</div>
+
+    <div class="gps-layout">
+        <!-- Map was moved back to sec-2 -->
+        
+        
+
+        <div id="gps-map" style="border-radius:12px; overflow:hidden; background:#f1f5f9; height:100%; min-height:600px; position:relative; display:block;"></div>
+        <!-- Sidebar -->
+        <div class="gps-sidebar">
+            <!-- Hop dong -->
+            <div class="panel">
+                <div class="panel-title">Hợp đồng</div>
+                <div class="info-row"><label>Mã HĐ</label><span id="r-id-txt" style="font-family:monospace;">N/A</span></div>
+                <div class="info-row"><label>Xe</label><span id="r-name-txt">N/A</span></div>
+                <div class="info-row"><label>Biển số</label><span id="r-license-txt" style="font-family:monospace;color:var(--cyan);">N/A</span></div>
+                <div class="info-row"><label>Ngày nhận</label><span id="r-start-txt">N/A</span></div>
+                <div class="info-row"><label>Ngày trả</label><span id="r-end-txt">N/A</span></div>
+            </div>
+
+            <!-- GPS -->
+            <div class="panel">
+                <div class="panel-title">Vị trí GPS</div>
+                <div class="info-row"><label>Vĩ độ</label><span id="gps-lat" style="font-family:monospace;font-size:11px;color:var(--cyan);">--</span></div>
+                <div class="info-row"><label>Kinh độ</label><span id="gps-lon" style="font-family:monospace;font-size:11px;color:var(--cyan);">--</span></div>
+                <div class="info-row"><label>Tốc độ</label><span id="gps-speed" style="color:var(--green);font-weight:700;">-- km/h</span></div>
+                <div class="info-row"><label>Hướng đi</label><span id="gps-heading" style="font-family:monospace;">--</span></div>
+                <div class="info-row"><label>Đang tới</label><span id="gps-waypoint" style="color:var(--cyan);font-size:11px;">--</span></div>
+                <div class="info-row"><label>Tiếp theo</label><span id="gps-nextwp" style="color:var(--text-3);font-size:11px;">--</span></div>
+                <div style="margin-top:8px;">
+                    <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;">Tiến trình lộ trình</div>
+                    <div style="background:var(--border);border-radius:4px;height:5px;overflow:hidden;">
+                        <div id="route-progress-bar" style="height:100%;width:0%;background:var(--cyan);border-radius:4px;transition:width 1s ease;"></div>
+                    </div>
+                </div>
+                <div class="info-row" style="margin-top:8px;"><label>Vùng an toàn</label><span id="gps-fence-status" style="color:var(--green);font-size:11px;">Trong vùng</span></div>
+                <div class="info-row"><label>Khoảng cách</label><span id="gps-dist">-- km</span></div>
+            </div>
+
+            <!-- Ma hoa -->
+            <div class="panel" style="border-color:rgba(8,145,178,0.3);">
+                <div class="panel-title" style="color:var(--cyan);">Mã hóa</div>
+                <div class="info-row"><label style="font-size:11px;">Thuật toán</label><span style="font-family:monospace;font-size:10px;color:var(--cyan);">AES-256-GCM</span></div>
+                <div class="info-row"><label style="font-size:11px;">Bọc khóa DEK</label><span style="font-family:monospace;font-size:10px;color:var(--cyan);">RSA-OAEP-SHA256</span></div>
+                <div class="info-row"><label style="font-size:11px;">Khóa DEK</label><span id="dek-status" style="color:var(--green);font-size:11px;">Hoạt động</span></div>
+                <div class="info-row"><label style="font-size:11px;">Chế độ</label><span id="gps-mode-txt" style="font-family:monospace;font-size:10px;color:var(--cyan);">GPS</span></div>
+                <div id="enc-sample" style="margin-top:6px;padding:6px;background:var(--bg);border-radius:6px;font-family:monospace;font-size:8px;color:var(--text-3);word-break:break-all;max-height:44px;overflow:hidden;">Chờ dữ liệu...</div>
+            </div>
+
+            <!-- Dieu khien -->
+            <div class="panel">
+                <div class="panel-title">Điều khiển</div>
+                <div class="ctrl-btn-pair" id="owner-ctrl-pair">
+                    <button class="ctrl-btn ctrl-btn-blue" onclick="sendRemoteCmd('RESTART')">Khởi động lại TB</button>
+                    <button class="ctrl-btn ctrl-btn-red" onclick="sendRemoteCmd('LOCK')" style="margin-bottom:0;">Khóa xe</button>
+                </div>
+                <div class="geofence-row" id="owner-geofence-row">
+                    <input type="number" id="geofence-r" class="geofence-input" value="5" min="0.5" max="50" step="0.5">
+                    <span style="font-size:12px;color:var(--text-2);">km</span>
+                    <button class="ctrl-btn ctrl-btn-blue" style="white-space:nowrap;margin-bottom:0;padding:7px 10px;" onclick="setGeofence()">Cập nhật vùng</button>
+                </div>
+                <button id="lock-engine-btn" class="ctrl-btn ctrl-btn-red" onclick="lockEngine()">Khóa động cơ khẩn cấp</button>
+                
+
+
+                <button class="ctrl-btn ctrl-btn-orange" id="return-car-btn" onclick="handleReturnCar()" style="margin-top:10px;">Trả xe & Xóa dữ liệu (VIPR)</button>
+            </div>
+
+            <!-- Trip Limit -->
+            <div class="panel" id="trip-limit-panel" style="border-color:rgba(234,88,12,0.3);">
+                <div class="panel-title" style="color:var(--orange);">Giới hạn chuyến đi</div>
+                <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;line-height:1.5;">Giới hạn xe di chuyển từ điểm xuất phát đến điểm đến trong số phút giới hạn. Quá giờ hoặc vượt khoảng cách sẽ báo động.</div>
+                <div class="trip-grid" style="margin-bottom:8px;">
+                    <div class="trip-input-wrap"><label>Điểm đi</label><input type="text" id="trip-from-name" value="Ha Noi"></div>
+                    <div class="trip-input-wrap"><label>Điểm đến</label><input type="text" id="trip-to-name" value="Noi Bai"></div>
+                    <div class="trip-input-wrap"><label>Số phút</label><input type="number" id="trip-limit-min" value="10" min="1"></div>
+                    <div class="trip-input-wrap"><label>Bán kính (km)</label><input type="number" id="trip-limit-radius" value="15" min="1"></div>
+                </div>
+                <div style="display:flex;gap:6px;">
+                    <button class="ctrl-btn ctrl-btn-orange" style="flex:1;margin-bottom:0;" onclick="setTripLimit()">Thiết lập</button>
+                    <button class="ctrl-btn" style="margin-bottom:0;padding:7px 12px;" onclick="clearTripLimit()">Xóa bỏ</button>
+                </div>
+                <div id="trip-limit-status-box" class="trip-status-box">
+                    <div style="display:flex;justify-content:space-between;font-weight:700;">
+                        <span style="color:var(--orange);">Trạng thái:</span>
+                        <span id="trip-status-text" style="color:var(--orange);">Đang chạy...</span>
+                    </div>
+                    <div style="margin-top:6px;font-family:monospace;font-size:11px;color:var(--text-2);">
+                        <div>Tuyến: <span id="trip-route-display">--</span></div>
+                        <div>Còn: <span id="trip-time-remaining">--</span> phút</div>
+                        <div>Khoảng cách: <span id="trip-distance">--</span> km / <span id="trip-max-radius">--</span> km</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Giai tri -->
+            <div class="panel">
+                <div class="panel-title">Dữ liệu trên xe</div>
+                <div class="info-row"><label>Danh bạ đã đồng bộ</label><span id="smart-contacts" style="font-size:11px;">--</span></div>
+                <div class="info-row"><label>Bluetooth đang kết nối</label><span id="smart-contacts-bt" style="font-size:11px;color:var(--cyan);">--</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- WiFi Panel -->
+    <div id="wifi-panel" class="panel" style="margin-top:12px;">
+        <div class="panel-title" style="color:var(--orange);">Wi-Fi dự phòng (mất GPS)</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;" id="wifi-bssids-grid"></div>
+        <p style="font-size:12px;color:var(--text-3);margin-top:8px;">Máy chủ nhận tín hiệu Wi-Fi BSSID lân cận để nội suy vị trí thay thế GPS bị mất sóng.</p>
+    </div>
+
+    <!-- Infotainment console -->
+    <div class="panel" style="margin-top:12px;">
+        <div class="panel-title">Nhật ký API</div>
+        <div class="api-console" id="console-box-gps">
+            <div class="c-line">[GPS] Chờ dữ liệu thực tế...</div>
+        </div>
+    </div>
+
+    <!-- VIPR Loader -->
+    <div class="vipr-overlay" id="vipr-screen">
+        <div class="vipr-inner">
+            <div class="loader-ring"></div>
+            <h3 style="color:var(--red);font-weight:800;font-size:15px;">ĐANG TRẢ XE & DỌN DẸP DỮ LIỆU</h3>
+            <p style="color:var(--text-2);font-size:12px;margin-top:8px;">Đang thực thi lệnh VIPR IoT Wipe. Xóa sạch danh bạ Bluetooth, nhật ký di chuyển và giải phóng khóa mật mã...</p>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 3: RENTAL HISTORY -->
+<!-- ============================================================ -->
+<div class="view-section" id="sec-3">
+    <div class="section-title">Lịch sử đặt xe</div>
+    <div class="section-sub">Tất cả các chuyến đi của bạn</div>
+    <div class="rental-history-grid" id="history-list">
+        <div style="text-align:center;padding:60px 0;color:var(--text-3);">Đang tải lịch sử...</div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 4: PROFILE -->
+<!-- ============================================================ -->
+<div class="view-section" id="sec-4">
+    <div class="section-title">Hồ sơ cá nhân</div>
+    <div class="section-sub">Cập nhật thông tin liên hệ của bạn</div>
+    <div class="profile-grid">
+        <div class="panel">
+            <div class="panel-title">Thông tin cá nhân</div>
+            <div class="alert alert-error" id="profile-err"></div>
+            <div class="alert alert-success" id="profile-ok"></div>
+            <div class="form-group">
+                <label>Họ và tên</label>
+                <input type="text" id="profile-fullname" placeholder="Nguyen Van A">
+            </div>
+            <div class="form-group">
+                <label>Số điện thoại</label>
+                <input type="tel" id="profile-phone" placeholder="09xxxxxxxx">
+            </div>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" id="profile-email" placeholder="email@example.com">
+            </div>
+            <div style="display:flex;gap:6px;align-items:center;padding:10px 0;border-top:1px solid var(--border);margin-bottom:14px;">
+                <span style="font-size:12px;color:var(--text-2);">Tên đăng nhập:</span>
+                <span id="profile-username" style="font-weight:700;font-size:13px;"></span>
+                <span id="profile-role" style="font-size:11px;padding:2px 8px;background:var(--primary-light);color:var(--primary);border-radius:10px;font-weight:700;"></span>
+            </div>
+            <button class="btn-save" onclick="updateProfile()">Lưu thay đổi</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 5: LICENSE (Driver's License) -->
+<!-- ============================================================ -->
+<div class="view-section" id="sec-5">
+    <div class="section-title">Bằng lái xe</div>
+    <div class="section-sub">Tải lên bằng lái để đủ điều kiện thuê xe</div>
+    <div class="profile-grid">
+        <div class="panel">
+            <div class="panel-title">1. Cập nhật số bằng lái</div>
+            <div class="form-group">
+                <label>Số Giấy Phép Lái Xe</label>
+                <input type="text" id="license-num-in" value="GPLX-AUTO-5555">
+            </div>
+            <button class="btn-save" onclick="submitLicenseInfo()" style="width:auto;padding:10px 24px;">Lưu thông tin</button>
+        </div>
+        <div class="panel">
+            <div class="panel-title">2. Tải lên ảnh chụp bằng lái</div>
+            <div class="form-group">
+                <label>Chọn file ảnh (JPG/PNG)</label>
+                <input type="file" id="license-img-in">
+            </div>
+            <button class="btn-save" onclick="submitLicenseImage()" style="width:auto;padding:10px 24px;">Tải lên ảnh</button>
+        </div>
+        <div class="panel" style="grid-column:span 2;">
+            <div class="panel-title">Trạng thái giấy tờ</div>
+            <table class="license-table">
+                <thead><tr><th>Mã tài liệu</th><th>Mã khách hàng</th><th>Dữ liệu (plain/cipher)</th><th>Bảo mật</th></tr></thead>
+                <tbody id="license-list-box"><tr><td colspan="4" style="padding:20px;text-align:center;color:var(--text-3);">Không có dữ liệu</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================ -->
+<!-- SECTION 6: SETTINGS -->
+<!-- ============================================================ -->
+<div class="view-section" id="sec-6">
+    <div class="section-title">Cài đặt bảo mật</div>
+    <div class="section-sub">Đổi mật khẩu hoặc cấu hình xác thực 2 lớp</div>
+    <div class="profile-grid">
+        <div class="panel">
+            <div class="panel-title">Đổi mật khẩu</div>
+            <div class="alert alert-error" id="pwd-err-alert"></div>
+            <div class="alert alert-success" id="pwd-succ-alert"></div>
+            <div class="form-group"><label>Mật khẩu hiện tại</label><input type="password" id="pwd-old-in"></div>
+            <div class="form-group"><label>Mật khẩu mới</label><input type="password" id="pwd-new-in"></div>
+            <div class="form-group"><label>Xác nhận mật khẩu mới</label><input type="password" id="pwd-confirm-in"></div>
+            <button class="btn-save" onclick="changeUserPassword()">Cập nhật mật khẩu</button>
+        </div>
+        <div class="panel">
+            <div class="panel-title">Xác thực 2 lớp (OTP)</div>
+            <p style="color:var(--text-2);font-size:13px;line-height:1.6;margin-bottom:12px;">Kích hoạt xác thực 2 lớp (MFA TOTP) bảo vệ tài khoản chống tấn công Brute Force.</p>
+            <button class="btn-save" id="mfa-action-btn" onclick="setupTwoFactor()" style="width:auto;padding:10px 20px;">Kích hoạt OTP</button>
+            <div id="mfa-box" style="display:none;background:var(--primary-light);border:1px solid rgba(26,86,219,0.2);border-radius:10px;padding:14px;margin-top:14px;">
+                <h4 style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:8px;">Đã kích hoạt OTP</h4>
+                <p style="font-size:12px;margin-bottom:6px;">Khóa bí mật: <strong id="mfa-secret-txt">SECRET</strong></p>
+                <p style="font-size:12px;color:var(--green);font-weight:700;" id="mfa-otp-txt">Mã OTP hiện tại: 000000</p>
+                <p style="font-size:11px;color:var(--text-3);margin-top:8px;">Quét khóa bí mật này vào ứng dụng Authenticator.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div><!-- end .main-content -->
+
+<!-- ===== MODAL: DANG NHAP ===== -->
+<div class="modal-overlay" id="login-modal">
+    <div class="modal-card" style="width:380px;">
+        <div class="modal-title">Đăng nhập tài khoản</div>
+        <div class="alert alert-error" id="login-err-msg"></div>
+        <div id="login-user-group" class="form-group"><label>Tài khoản</label><input type="text" id="username-in" autocomplete="username"></div>
+        <div id="login-pass-group" class="form-group"><label>Mật khẩu</label><input type="password" id="password-in" autocomplete="current-password"></div>
+        <button class="btn-save" id="btn-submit-login" onclick="submitLogin()" style="width:100%;margin-bottom:8px;">Đăng nhập</button>
+        
+        <div style="margin: 8px 0; text-align: center; font-size: 11px; color: var(--text-3);">— HOẶC —</div>
+        <button class="btn-save" onclick="loginGoogleClient()" style="width:100%; background:#ea4335; margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:8px;">
+            <svg style="width:16px;height:16px;fill:#fff;" viewBox="0 0 24 24"><path d="M12.24 10.285V13.4h6.887c-.275 1.565-1.88 4.604-6.887 4.604-4.33 0-7.866-3.577-7.866-8s3.536-8 7.866-8c2.46 0 4.105 1.025 5.047 1.926l2.427-2.334C18.155 2.185 15.44 1 12.24 1 6.033 1 1 6.033 1 12.24s5.033 11.24 11.24 11.24c6.478 0 10.793-4.537 10.793-10.988 0-.746-.08-1.32-.176-1.888H12.24z"/></svg>
+            Đăng nhập bằng Google
+        </button>
+
+        <div id="otp-container" style="display:none;border-top:1px solid var(--border);padding-top:14px;margin-top:6px;">
+            <div class="form-group">
+                <label>Nhập mã OTP (6 số)</label>
+                <input type="text" id="otp-in" placeholder="Mã OTP 6 chữ số">
+            </div>
+            <button class="btn-save" onclick="submitMfaOTP()" style="width:100%;background:var(--green);margin-bottom:8px;">Xác nhận OTP</button>
+        </div>
+        <div style="text-align:center; margin-top:12px; font-size:13px;">
+            Chưa có tài khoản? <a href="javascript:void(0)" onclick="hideLoginModal(); showRegisterModal();" style="color:var(--primary); font-weight:600;">Đăng ký ngay</a>
+        </div>
+        <button onclick="hideLoginModal()" style="width:100%;padding:10px;border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;margin-top:12px;">Đóng</button>
+    </div>
+</div>
+
+<!-- ===== MODAL: DANG KY ===== -->
+<div class="modal-overlay" id="register-modal">
+    <div class="modal-card" style="width:400px;">
+        <div class="modal-title">Đăng ký tài khoản</div>
+        <div class="alert alert-error" id="register-err-msg"></div>
+        
+        <div class="form-group"><label>Tên đăng nhập *</label><input type="text" id="reg-username"></div>
+        <div style="display:flex; gap:12px;">
+            <div class="form-group" style="flex:1"><label>Mật khẩu *</label><input type="password" id="reg-password"></div>
+            <div class="form-group" style="flex:1"><label>Nhập lại mật khẩu *</label><input type="password" id="reg-confirm"></div>
+        </div>
+        <div class="form-group"><label>Họ và tên</label><input type="text" id="reg-fullname"></div>
+        <div style="display:flex; gap:12px;">
+            <div class="form-group" style="flex:1"><label>SĐT</label><input type="text" id="reg-phone"></div>
+            <div class="form-group" style="flex:1"><label>Email</label><input type="text" id="reg-email"></div>
+        </div>
+        
+        <button class="btn-save" onclick="submitRegister()" style="width:100%;margin-top:8px;">Đăng ký</button>
+        
+        <div style="text-align:center; margin-top:12px; font-size:13px;">
+            Đã có tài khoản? <a href="javascript:void(0)" onclick="hideRegisterModal(); showLoginModal();" style="color:var(--primary); font-weight:600;">Đăng nhập</a>
+        </div>
+        <button onclick="hideRegisterModal()" style="width:100%;padding:10px;border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;margin-top:12px;">Đóng</button>
+    </div>
+</div>
+
+<!-- ===== MODAL: CHI TIET XE + DAT XE ===== -->
+<div class="modal-overlay" id="car-detail-modal">
+    <div class="modal-card">
+        <div class="modal-title" id="md-car-title">Chi tiết xe</div>
+        
+        <!-- Standard details wrapper -->
+        <div id="modal-standard-details">
+            <img id="md-car-img" class="modal-img" src="" alt="Ảnh xe" onerror="this.parentElement.style.background='#e2e8f0';this.style.display='none'">
+            <div class="spec-grid">
+                <div class="spec-item"><label>Động cơ</label><span id="md-spec-engine">--</span></div>
+                <div class="spec-item"><label>Hộp số</label><span id="md-spec-gearbox">--</span></div>
+                <div class="spec-item"><label>Số chỗ ngồi</label><span id="md-spec-seats">--</span></div>
+                <div class="spec-item"><label>Biển số</label><span id="md-spec-plate">--</span></div>
+                <div class="spec-item"><label>Đánh giá</label><span id="md-spec-rating">--</span></div>
+                <div class="spec-item"><label>Loại xe</label><span id="md-spec-category">--</span></div>
+            </div>
+            <div class="modal-desc" id="md-car-desc">...</div>
+            <div class="modal-features" id="md-car-features"></div>
+
+            <!-- Book date form -->
+            <div class="book-date-form" id="book-date-section">
+                <div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text);">Chọn thời gian thuê</div>
+                <div class="bdg">
+                    <div>
+                        <label>Ngày nhận xe</label>
+                        <input type="date" id="book-start-date">
+                    </div>
+                    <div>
+                        <label>Ngày trả xe</label>
+                        <input type="date" id="book-end-date">
+                    </div>
+                </div>
+                <div>
+                    <label>Địa điểm nhận xe</label>
+                    <select id="book-pickup" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;">
+                        <option>Hà Nội</option>
+                        <option>Hồ Chí Minh</option>
+                        <option>Đà Nẵng</option>
+                        <option>Hải Phòng</option>
+                    </select>
+                </div>
+                <!-- Route Setting Options -->
+                <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+                    <div style="font-size:14px; font-weight:700; margin-bottom:8px;">Lộ trình giám sát GPS</div>
+                    <p style="font-size:12px; color:var(--text-2); margin-bottom:10px;">Chọn lộ trình di chuyển mong muốn cho xe (mô phỏng theo thời gian thực):</p>
+                    <select id="book-route-type" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:14px;">
+                        <option value="hanoi">Hà Nội (Vòng trung tâm)</option>
+                        <option value="airport">Sân Bay Nội Bài</option>
+                        <option value="north_vietnam">Vành đai 3 - Ngoại thành</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Price summary -->
+            <div class="price-summary" id="price-summary" style="display:none;">
+                <div>
+                    <div class="label" id="price-days-label">1 ngày</div>
+                    <div style="font-size:12px;color:var(--text-3);" id="price-range-label"></div>
+                </div>
+                <div class="total" id="price-total">--</div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-rent" id="md-rent-btn" onclick="executeRentFromModal()">Đặt xe ngay</button>
+                <button class="modal-actions .btn-secondary" onclick="hideCarDetailModal()" style="width:100%;padding:10px;font-size:13px;font-weight:600;border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-family:inherit;">Đóng</button>
+            </div>
+
+            <!-- Reviews in modal -->
+            <div id="md-reviews" style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
+                <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Đánh giá từ khách hàng</div>
+                <div id="md-reviews-list"></div>
+            </div>
+        </div>
+
+        <!-- Active rental details wrapper -->
+        <div id="modal-active-rental-section" style="display:none;">
+            <!-- Map container moved from #sec-2 -->
+            <div class="gps-map-wrap" style="margin-bottom:16px;">
+                <div class="map-badge" id="gps-mode-badge">GPS thực tế</div>
+                <div class="map-controls">
+                    <select id="map-style-select" class="map-btn" style="border:none;" onchange="changeMapStyle()">
+                        <option value="google_roadmap">Google Maps</option>
+                        <option value="google_satellite">Google Vệ tinh</option>
+                        <option value="osm_light">OpenStreetMap</option>
+                        <option value="carto_dark">CartoDB Dark</option>
+                        <option value="offline_image">Offline</option>
+                    </select>
+                    <button id="btn-client-map-mode" class="map-btn" onclick="toggleClientMapMode()">Radar</button>
+                    <button class="map-btn" onclick="zoomClientMap(1.2)">+</button>
+                    <button class="map-btn" onclick="zoomClientMap(0.8)">-</button>
+                </div>
+                <div class="waypoint-bar" id="waypoint-bar">Đang khởi tạo...</div>
+                
+                <div id="client-fallback-canvas-wrapper">
+                    <canvas id="fallback-canvas" width="800" height="460"></canvas>
+                </div>
+                <div class="enc-badge">Mã hóa AES-256-GCM</div>
+                <div id="tamper-overlay">
+                    <div style="font-size:32px;color:var(--red);font-weight:900;">!</div>
+                    <h3 style="color:var(--red);font-size:16px;font-weight:900;">PHÁT HIỆN XÂM NHẬP PHẦN CỨNG</h3>
+                    <p style="color:var(--text-2);font-size:12px;text-align:center;padding:0 20px;">Đã xóa toàn bộ khóa mật mã. Động cơ xe đã bị khóa.</p>
+                </div>
+                <div id="engine-locked-overlay">
+                    <div style="font-size:28px;color:var(--orange);font-weight:900;">X</div>
+                    <h3 style="color:var(--orange);font-size:15px;font-weight:800;">ĐỘNG CƠ BỊ KHÓA</h3>
+                    <p style="color:var(--text-2);font-size:11px;">Xe không thể khởi động</p>
+                </div>
+            </div>
+            
+            <!-- Live GPS Status Cards -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:16px;">
+                <div style="background:var(--bg); border-radius:10px; padding:16px; border:1px solid var(--border); border-left:4px solid var(--blue);">
+                    <div style="font-size:11px; color:var(--text-3); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Vị trí hiện tại</div>
+                    <div id="ui-current-location" style="font-size:16px; font-weight:800; color:var(--primary); line-height:1.3;">--</div>
+                    <div id="ui-next-location" style="font-size:12px; color:var(--text-2); margin-top:4px;">Đang hướng tới: --</div>
+                </div>
+                <div style="background:var(--bg); border-radius:10px; padding:16px; border:1px solid var(--border); border-left:4px solid var(--red);">
+                    <div style="font-size:11px; color:var(--text-3); font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Tốc độ di chuyển</div>
+                    <div id="ui-current-speed" style="font-size:24px; font-weight:900; color:var(--text); font-variant-numeric: tabular-nums;">-- <span style="font-size:14px; font-weight:600; color:var(--text-3);">km/h</span></div>
+                </div>
+            </div>
+
+            <!-- Route Info: Nơi đi, Nơi đến, Đi mấy tiếng -->
+            <div style="background:var(--bg); border-radius:10px; padding:16px; margin-bottom:16px; display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; border:1px solid var(--border);">
+                <div>
+                    <label style="font-size:11px; color:var(--text-3); display:block; margin-bottom:4px; font-weight:600;">Nơi đi</label>
+                    <span id="rental-detail-pickup" style="font-size:14px; font-weight:700; color:var(--text);">--</span>
+                </div>
+                <div>
+                    <label style="font-size:11px; color:var(--text-3); display:block; margin-bottom:4px; font-weight:600;">Nơi đến</label>
+                    <span id="rental-detail-return" style="font-size:14px; font-weight:700; color:var(--text);">--</span>
+                </div>
+                <div>
+                    <label style="font-size:11px; color:var(--text-3); display:block; margin-bottom:4px; font-weight:600;">Thời gian thuê</label>
+                    <span id="rental-detail-duration" style="font-size:14px; font-weight:700; color:var(--text);">--</span>
+                </div>
+            </div>
+
+            <!-- Telematics Controls (Only for Owned Car) -->
+            <div id="modal-telematics-controls" style="display:none;">
+                <!-- Geofence & Home Location Panel -->
+                <div style="background:var(--bg); border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:16px;">
+                    <div style="font-size:12px; font-weight:700; color:var(--text); margin-bottom:8px; text-transform:uppercase; letter-spacing:0.5px;">Địa giới an toàn (Geofence)</div>
+                    <table style="width:100%; border-collapse:collapse; font-size:12px; line-height:1.6;">
+                        <tr>
+                            <td style="color:var(--text-3); padding:4px 0; font-weight:600; text-align:left;">Vị trí nhà chủ xe:</td>
+                            <td id="modal-owner-home" style="color:var(--text); font-weight:700; text-align:right;">Hồ Hoàn Kiếm, Hà Nội (21.02850°N, 105.85240°E)</td>
+                        </tr>
+                        <tr>
+                            <td style="color:var(--text-3); padding:4px 0; font-weight:600; text-align:left;">Khoảng cách xe hiện tại:</td>
+                            <td id="modal-current-dist" style="color:var(--cyan); font-weight:700; text-align:right;">-- km</td>
+                        </tr>
+                        <tr>
+                            <td style="color:var(--text-3); padding:4px 0; font-weight:600; text-align:left;">Bán kính cho phép:</td>
+                            <td style="text-align:right; padding:4px 0;">
+                                <div style="display:inline-flex; align-items:center; gap:6px;">
+                                    <input type="number" id="modal-geofence-r" style="width:60px; padding:3px 6px; border:1px solid var(--border); border-radius:6px; font-size:11px; font-family:monospace; text-align:center;" value="5" min="0.5" max="50" step="0.5">
+                                    <span style="font-weight:600; color:var(--text-3);">km</span>
+                                    <button class="map-btn" onclick="setGeofence()" style="padding:3px 8px; font-size:11px; font-weight:700; border-radius:6px;">Thiết lập</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="color:var(--text-3); padding:4px 0; font-weight:600; text-align:left;">Trạng thái kiểm soát:</td>
+                            <td id="modal-geofence-status" style="text-align:right; font-weight:700;">--</td>
+                        </tr>
+                    </table>
+                </div>
+
+
+
+                <!-- Telematics Buttons -->
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+                    <button class="btn-save" onclick="sendRemoteCmd('UNLOCK')" style="background:var(--green); padding:10px; font-size:13px; font-weight:700; width:100%;">Khởi động lại xe (Mở khóa)</button>
+                    <button class="btn-save" onclick="sendRemoteCmd('LOCK')" style="background:var(--orange); padding:10px; font-size:13px; font-weight:700; width:100%;">Khóa xe</button>
+                </div>
+            </div>
+
+            <!-- Return button (Only for Rented Car) -->
+            <button id="modal-btn-return-car" class="btn-save" onclick="handleReturnCar()" style="background:var(--red); padding:12px; font-size:13px; font-weight:700; margin-bottom:8px; width:100%; display:none;">Trả xe & Xóa dữ liệu (VIPR)</button>
+            
+            <button onclick="hideCarDetailModal()" style="width:100%; padding:10px; font-size:13px; font-weight:600; border:1px solid var(--border); background:#fff; border-radius:8px; cursor:pointer; font-family:inherit;">Đóng</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL: DANH GIA XE ===== -->
+<div class="modal-overlay" id="review-modal">
+    <div class="modal-card" style="width:380px;">
+        <div class="modal-title">Đánh giá xe</div>
+        <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;" id="review-vehicle-name">Xe: --</div>
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Xếp hạng:</div>
+        <div class="star-picker" id="star-picker">
+            <button class="star-btn" data-v="1" onclick="setRating(1)">&#9733;</button>
+            <button class="star-btn" data-v="2" onclick="setRating(2)">&#9733;</button>
+            <button class="star-btn" data-v="3" onclick="setRating(3)">&#9733;</button>
+            <button class="star-btn" data-v="4" onclick="setRating(4)">&#9733;</button>
+            <button class="star-btn" data-v="5" onclick="setRating(5)">&#9733;</button>
+        </div>
+        <div class="form-group" style="margin-top:12px;">
+            <label>Nhận xét (tùy chọn)</label>
+            <textarea id="review-comment" rows="3" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit;resize:none;"></textarea>
+        </div>
+        <div class="alert alert-error" id="review-err"></div>
+        <button class="btn-save" onclick="submitReview()" style="width:100%;margin-bottom:8px;">Gửi đánh giá</button>
+        <button onclick="document.getElementById('review-modal').style.display='none';" style="width:100%;padding:10px;border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;">Hủy</button>
+    </div>
+</div>
+
+<script src="leaflet/leaflet.js" id="leaflet-js">
+
+
+</script>
+
+<script>
+
+// ============================================================
+// GLOBALS
+// ============================================================
+let loggedInUser = null;
+let myActiveRental = null;
+let myOwnedVehicle = null;
+let activeTrackingVehicle = null;
+let selectedCarIdForDetail = null;
+let selectedCarForDetail = null;
+let mfaRequiredUsername = null;
+let currentRating = 0;
+let reviewVehicleId = null;
+let activeFilterCat = 0;
+let searchParams = {};
+
+// Map globals
+let leafletMap = null;
+let vehicleMarker = null;
+let gpsPathLine = null;
+let gpsPathPoints = [];
+let routePolyline = null;
+let routeData = null;
+let geofenceCircle = null;
+let currentGps = null;
+let gpsSSE = null;
+let clientMapMode = 'map';
+let currentTileLayer = null;
+let currentMapStyle = 'google_roadmap';
+let poiMarkers = [];
+let gpsSSEVehicleId = null;
+
+const hanoiMapImg = new Image();
+hanoiMapImg.onload = () => { if (currentGps) drawCanvasFallback(currentGps); };
+hanoiMapImg.src = 'map_hanoi.png';
+const northVietnamMapImg = new Image();
+northVietnamMapImg.onload = () => { if (currentGps) drawCanvasFallback(currentGps); };
+northVietnamMapImg.src = 'map_north_vietnam.png';
+
+// ============================================================
+// TOAST NOTIFICATION
+// ============================================================
+function showToast(msg, type = 'info', duration = 3500) {
+    const icons = { success: '[OK]', error: '[LỖI]', info: '[TIN]', warn: '[CẢNH BÁO]' };
+    const container = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`;
+    t.innerHTML = `<span>${icons[type] || '[TIN]'}</span><span>${msg}</span>`;
+    container.appendChild(t);
+    setTimeout(() => t.style.opacity = '0', duration - 300);
+    setTimeout(() => t.remove(), duration);
+}
+
+function printLog(type, msg, boxId) {
+    const box = document.getElementById(boxId || 'console-box');
+    if (!box) return;
+    const line = document.createElement('div');
+    const cls = type === 'REQ' ? 'c-req' : type === 'ERR' ? 'c-err' : type === 'RES' ? 'c-res' : '';
+    const time = new Date().toLocaleTimeString('vi-VN', { hour12: false });
+    line.className = `c-line ${cls}`;
+    line.textContent = `[${time}] [${type}] ${msg}`;
+    box.appendChild(line);
+    box.scrollTop = box.scrollHeight;
+}
+
+// ============================================================
+// NAV & SECTION
+// ============================================================
+function switchView(sectionId) {
+    // Support both old numeric calls (legacy) and new string IDs
+    const sectionMap = { 1: 'sec-1', 2: 'sec-2', 3: 'sec-3', 4: 'sec-4', 5: 'sec-5', 6: 'sec-6' };
+    const secId = (typeof sectionId === 'number') ? sectionMap[sectionId] : sectionId;
+
+    // Hide all sections
+    document.querySelectorAll('.view-section').forEach(s => {
+        s.classList.remove('active');
+        s.style.display = 'none';
+    });
+
+    // Show target section
+    const target = document.getElementById(secId);
+    if (target) { target.classList.add('active'); target.style.display = 'block'; }
+
+    // Update nav-link active state — only highlight buttons with matching data-section
+    document.querySelectorAll('.nav-link[data-section]').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.section === secId);
+    });
+    // Clear active from special nav buttons (link-rented, link-owned) when switching views
+    ['link-rented', 'link-owned'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+    });
+
+    if (secId === 'sec-1') fetchFleet();
+    else if (secId === 'sec-2') initGpsView();
+    else if (secId === 'sec-map') {
+
+        document.getElementById('sec-map').style.display = 'flex';
+        initClientFleetMap();
+    }
+    else if (secId === 'sec-3') fetchHistory();
+    else if (secId === 'sec-4') { loadProfile(); loadReviewableVehicles(); }
+    else if (secId === 'sec-5') fetchLicenseRecords();
+    else if (secId === 'sec-6') loadMfaSettings();
+}
+
+// ============================================================
+
+// ============================================================
+// CLIENT FLEET MAP
+// ============================================================
+let clientFleetMap = null;
+let clientFleetMarkers = {};
+
+function initClientFleetMap() {
+    if (clientFleetMap) {
+        clientFleetMap.invalidateSize();
+        return;
+    }
+    
+    clientFleetMap = L.map('client-fleet-map', {
+        center: [21.028, 105.834],
+        zoom: 12,
+        zoomControl: true
+    });
+    
+    L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        attribution: '&copy; Google Maps',
+        subdomains: '0123',
+        maxZoom: 20
+    }).addTo(clientFleetMap);
+    
+    fetchClientFleetLocations();
+    setInterval(fetchClientFleetLocations, 3000);
+}
+
+async function fetchClientFleetLocations() {
+    try {
+        const res = await fetch('/api/v2/vehicles/gps-all');
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        data.forEach(s => {
+            if (s.lat === null || s.lon === null) {
+                if (clientFleetMarkers[s.vehicleId]) {
+                    clientFleetMap.removeLayer(clientFleetMarkers[s.vehicleId]);
+                    delete clientFleetMarkers[s.vehicleId];
+                }
+                return;
+            }
+            
+            const pos = [s.lat, s.lon];
+            let routeColor = '#3b82f6';
+            if (s.routeType === 'airport') routeColor = '#10b981';
+            else if (s.routeType === 'north_vietnam') routeColor = '#d946ef';
+            
+            if (s.isLocked || s.isTampered) routeColor = '#dc2626';
+
+            if (!clientFleetMarkers[s.vehicleId]) {
+                const carIcon = L.divIcon({
+                    html: `<div class="admin-car-marker" id="client-car-${s.vehicleId}" style="width:18px;height:18px;background:${routeColor};border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:bold;">${s.vehicleId}</div>`,
+                    className: '',
+                    iconSize: [18, 18],
+                    iconAnchor: [9, 9]
+                });
+                clientFleetMarkers[s.vehicleId] = L.marker(pos, { icon: carIcon }).addTo(clientFleetMap);
+            } else {
+                clientFleetMarkers[s.vehicleId].addTo(clientFleetMap);
+                clientFleetMarkers[s.vehicleId].setLatLng(pos);
+                const iconEl = clientFleetMarkers[s.vehicleId].getElement()?.querySelector('div');
+                if (iconEl) iconEl.style.background = routeColor;
+            }
+
+            const carEl = document.getElementById(`client-car-${s.vehicleId}`);
+            if (carEl) {
+                carEl.style.transform = `rotate(${(s.heading || 0)}deg)`;
+            }
+        });
+    
+                await refreshOwnedVehicleLink();
+    } catch(e) {}
+
+}
+
+
+async function refreshOwnedVehicleLink() {
+    myOwnedVehicle = null;
+    const link = document.getElementById('link-owned');
+    if (link) link.style.display = 'none';
+    if (!loggedInUser) return;
+    try {
+        const res = await fetch('/api/v2/vehicles/my-owned');
+        if (res.ok) {
+            const ownedList = await res.json();
+            if (ownedList && ownedList.length > 0) {
+                const vehicle = ownedList[0];
+                myOwnedVehicle = {
+                    ...vehicle,
+                    VehicleID: vehicle.VehicleID
+                };
+                if (link) link.style.display = 'inline-block';
+            }
+        }
+    } catch (err) {
+        printLog('ERR', `Khong tai duoc xe so huu: ${err.message}`);
+    }
+}
+
+// ============================================================
+// LICENSE (KB4)
+// ============================================================
+async function submitLicenseInfo() {
+    const num = document.getElementById('license-num-in').value.trim();
+    if (!num) return;
+    printLog('REQ', `POST /api/v2/user/document`);
+    const res = await fetch('/api/v2/user/document', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({LicenseNumber: num})
+    });
+    const txt = await res.text();
+    printLog('RES', txt);
+    alert(txt);
+    fetchLicenseRecords();
+}
+async function submitLicenseImage() {
+    const fileInput = document.getElementById('license-img-in');
+    if (!fileInput.files[0]) return alert('Vui long chon anh!');
+    const form = new FormData();
+    form.append('license_image', fileInput.files[0]);
+    printLog('REQ', `POST /api/v2/upload-license`);
+    const res = await fetch('/api/v2/upload-license', {method:'POST', credentials:'include', body:form});
+    const txt = await res.text();
+    printLog('RES', txt); alert(txt);
+}
+async function fetchLicenseRecords() {
+    const res = await fetch('/api/db/documents');
+    const docs = await res.json();
+    const tbody = document.getElementById('license-list-box');
+    if (!docs.length) { tbody.innerHTML='<tr><td colspan="4" style="padding:16px;text-align:center;color:var(--text-3);">Khong co du lieu</td></tr>'; return; }
+    tbody.innerHTML = docs.map(d => `
+        <tr>
+            <td>DOC-${d.DocID}</td>
+            <td>ACC-${d.AccountID}</td>
+            <td>${d.LicenseData?.slice(0,60)||''}...</td>
+            <td style="color:${d.IsEncrypted?'var(--green)':'var(--red)'};">${d.IsEncrypted?'RSA Encrypted':'PLAIN TEXT'}</td>
+        </tr>
+    `).join('');
+}
+
+// ============================================================
+// SETTINGS: PASSWORD + MFA
+// ============================================================
+async function changeUserPassword() {
+    const oldP = document.getElementById('pwd-old-in').value;
+    const newP = document.getElementById('pwd-new-in').value;
+    const cnfP = document.getElementById('pwd-confirm-in').value;
+    const errEl = document.getElementById('pwd-err-alert');
+    const okEl = document.getElementById('pwd-succ-alert');
+    if (newP !== cnfP) { errEl.textContent='Mat khau xac nhan khong khop!'; errEl.style.display='block'; okEl.style.display='none'; return; }
+    const res = await fetch('/api/v2/auth/change-password', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({oldPassword:oldP, newPassword:newP})
+    });
+    const data = await res.json();
+    if (res.ok) { okEl.textContent=data.message; okEl.style.display='block'; errEl.style.display='none'; }
+    else { errEl.textContent=data.error; errEl.style.display='block'; okEl.style.display='none'; }
+}
+async function loadMfaSettings() {
+    if (!loggedInUser) return;
+    const res = await fetch('/api/v2/auth/mfa-status', {credentials:'include'});
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.mfaEnabled) {
+        document.getElementById('mfa-action-btn').textContent='Da kich hoat OTP';
+        document.getElementById('mfa-box').style.display='block';
+        document.getElementById('mfa-secret-txt').textContent = data.secret;
+        document.getElementById('mfa-otp-txt').textContent = 'Ma OTP hien tai: '+data.currentOTP;
+    }
+}
+async function setupTwoFactor() {
+    const res = await fetch('/api/v2/auth/mfa-setup', {method:'POST', credentials:'include'});
+    const data = await res.json();
+    if (res.ok) {
+        document.getElementById('mfa-action-btn').textContent='Da kich hoat OTP';
+        document.getElementById('mfa-box').style.display='block';
+        document.getElementById('mfa-secret-txt').textContent = data.secret;
+        document.getElementById('mfa-otp-txt').textContent = 'Ma OTP hien tai: '+data.currentOTP;
+    }
+}
+
+// ============================================================
+// GPS MAP (Section 2)
+// ============================================================
+function initGpsView() {
+    if (!activeTrackingVehicle) return;
+    // Update contract info
+    const isOwned = myOwnedVehicle && myOwnedVehicle.VehicleID === activeTrackingVehicle.VehicleID;
+    if (isOwned) {
+        document.getElementById('r-id-txt').textContent = '#OWNED-' + activeTrackingVehicle.VehicleID;
+        document.getElementById('r-name-txt').textContent = activeTrackingVehicle.Model || '--';
+        document.getElementById('r-license-txt').textContent = activeTrackingVehicle.LicensePlate || '--';
+        document.getElementById('r-start-txt').textContent = 'Vĩnh viễn';
+        document.getElementById('r-end-txt').textContent = 'Vĩnh viễn';
+    } else {
+        document.getElementById('r-id-txt').textContent = '#' + (myActiveRental ? myActiveRental.RentalID : '--');
+        document.getElementById('r-name-txt').textContent = activeTrackingVehicle.Model || '--';
+        document.getElementById('r-license-txt').textContent = activeTrackingVehicle.LicensePlate || '--';
+        document.getElementById('r-start-txt').textContent = (myActiveRental ? myActiveRental.StartDate : '--');
+        document.getElementById('r-end-txt').textContent = (myActiveRental ? myActiveRental.EndDate : '--');
+    }
+
+    // Show/Hide controls based on ownership
+    const ctrlPair = document.getElementById('owner-ctrl-pair');
+    const geofenceRow = document.getElementById('owner-geofence-row');
+    const lockEngBtn = document.getElementById('lock-engine-btn');
+    const returnCarBtn = document.getElementById('return-car-btn');
+    const tripLimitPanel = document.getElementById('trip-limit-panel');
+    
+    if (isOwned) {
+        if (ctrlPair) ctrlPair.style.display = 'flex';
+        if (geofenceRow) geofenceRow.style.display = 'flex';
+        if (lockEngBtn) lockEngBtn.style.display = 'block';
+        if (tripLimitPanel) tripLimitPanel.style.display = 'block';
+        if (returnCarBtn) returnCarBtn.style.display = 'none';
+    } else {
+        if (ctrlPair) ctrlPair.style.display = 'none';
+        if (geofenceRow) geofenceRow.style.display = 'none';
+        if (lockEngBtn) lockEngBtn.style.display = 'none';
+        if (tripLimitPanel) tripLimitPanel.style.display = 'none';
+        if (returnCarBtn) returnCarBtn.style.display = 'block';
+    }
+
+    // Load Leaflet
+    if (!window.L) {
+        const s = document.createElement('script');
+        s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+        s.onload = initLeafletMap;
+        document.head.appendChild(s);
+    } else if (!leafletMap) {
+        initLeafletMap();
+    } else {
+        setTimeout(() => {
+            leafletMap.invalidateSize();
+        }, 200);
+    }
+    startGpsSSE();
+    fetchInfotainment();
+}
+
+function initLeafletMap() {
+    if (leafletMap) return;
+    const mapEl = document.getElementById('gps-map');
+    if (!mapEl) return;
+    // Ensure map container is visible before init
+    mapEl.style.display = 'block';
+    const cw = document.getElementById('client-fallback-canvas-wrapper');
+    if (cw) cw.style.display = 'none';
+    leafletMap = L.map('gps-map', {zoomControl:true}).setView([21.028, 105.834], 13);
+    updateTileLayer('google_roadmap');
+    // Call invalidateSize multiple times to handle CSS transition
+    setTimeout(() => leafletMap.invalidateSize(), 100);
+    setTimeout(() => leafletMap.invalidateSize(), 400);
+    setTimeout(() => leafletMap.invalidateSize(), 800);
+}
+
+function updateTileLayer(style) {
+    if (currentTileLayer) { leafletMap.removeLayer(currentTileLayer); currentTileLayer = null; }
+    currentMapStyle = style;
+    let url, opts;
+    if (style==='carto_dark') {
+        url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        opts = {attribution:'&copy; CARTO', subdomains:'abcd', maxZoom:20};
+    } else if (style==='osm_light') {
+        url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        opts = {attribution:'&copy; OpenStreetMap contributors', subdomains:'abc', maxZoom:19};
+    } else if (style==='google_roadmap') {
+        url = 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+        opts = {attribution:'&copy; Google Maps', subdomains:'0123', maxZoom:20};
+    } else if (style==='google_satellite') {
+        url = 'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}';
+        opts = {attribution:'&copy; Google Maps', subdomains:'0123', maxZoom:20};
+    } else if (style==='offline_image') {
+        useOfflineMap();
+        return;
+    }
+    if (url) {
+        currentTileLayer = L.tileLayer(url, opts).addTo(leafletMap);
+        currentTileLayer.on('tileerror', () => showMapErrorSuggestion());
+    }
+}
+
+function showMapErrorSuggestion() {
+    const existing = document.getElementById('offline-map-suggestion');
+    if (existing) return;
+    const container = document.createElement('div');
+    container.id = 'offline-map-suggestion';
+    container.style.cssText = 'position:absolute;bottom:50px;left:50%;transform:translateX(-50%);z-index:2000;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px 16px;display:flex;gap:8px;align-items:center;font-size:12px;';
+    container.innerHTML = `<span>Loi tai ban do. Chuyen sang offline?</span>
+        <button onclick="useOfflineMap()" style="background:#856404;color:#fff;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-weight:bold;">Dong y</button>
+        <button onclick="document.getElementById('offline-map-suggestion').remove()" style="background:transparent;color:#856404;border:none;cursor:pointer;font-weight:bold;">X</button>`;
+    document.getElementById('gps-map').parentElement.appendChild(container);
+}
+
+function changeMapStyle() {
+    const style = document.getElementById('map-style-select').value;
+    if (style==='offline_image') { useOfflineMap(); return; }
+    if (clientMapMode==='radar') { clientMapMode='map'; updateModeBtn(); }
+    const mw = document.getElementById('gps-map'); const cw = document.getElementById('client-fallback-canvas-wrapper');
+    if(mw) mw.style.display='block'; if(cw) cw.style.display='none';
+    if (leafletMap) { updateTileLayer(style); setTimeout(()=>leafletMap.invalidateSize(),100); }
+    else initLeafletMap();
+}
+
+function useOfflineMap() {
+    clientMapMode = 'radar';
+    updateModeBtn();
+    const mw = document.getElementById('gps-map'); const cw = document.getElementById('client-fallback-canvas-wrapper');
+    if(mw) mw.style.display='none'; if(cw) cw.style.display='block';
+    if (currentGps) drawCanvasFallback(currentGps);
+}
+
+function toggleClientMapMode() {
+    clientMapMode = clientMapMode==='map'?'radar':'map';
+    updateModeBtn();
+    const mw = document.getElementById('gps-map'); const cw = document.getElementById('client-fallback-canvas-wrapper');
+    if (clientMapMode==='radar') { if(mw) mw.style.display='none'; if(cw) cw.style.display='block'; if(currentGps) drawCanvasFallback(currentGps); }
+    else { if(mw) mw.style.display='block'; if(cw) cw.style.display='none'; if(leafletMap) setTimeout(()=>leafletMap.invalidateSize(),100); }
+}
+function updateModeBtn() {
+    const btn = document.getElementById('btn-client-map-mode');
+    if(btn) btn.textContent = clientMapMode==='radar'?'Ban do truc tuyen':'Radar';
+}
+function zoomClientMap(factor) {
+    if (clientMapMode==='map'&&leafletMap) leafletMap.setZoom(leafletMap.getZoom()+(factor>1?1:-1));
+    else {
+        const canvas = document.getElementById('fallback-canvas');
+        if (!canvas) return;
+        const cw = parseFloat(canvas.style.width||canvas.width);
+        canvas.style.width = (cw*factor)+'px';
+        canvas.style.height = 'auto';
+    }
+}
+
+function drawCanvasFallback(data) {
+    const canvas = document.getElementById('fallback-canvas');
+    if (!canvas||!data) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.width; const H = canvas.height;
+    ctx.clearRect(0,0,W,H);
+    const isNorth = data.lat>20;
+    const mapImg = isNorth ? northVietnamMapImg : hanoiMapImg;
+    const bounds = isNorth ? {minLat:19.5,maxLat:23.5,minLon:103,maxLon:108} : {minLat:20.8,maxLat:21.2,minLon:105.6,maxLon:106.1};
+    if (mapImg.complete&&mapImg.naturalWidth>0) { ctx.drawImage(mapImg,0,0,W,H); }
+    else { ctx.fillStyle='#e8f0fe'; ctx.fillRect(0,0,W,H); ctx.fillStyle='#cbd5e1'; ctx.font='14px Inter,sans-serif'; ctx.fillText('Radar Mode - Offline Map',W/2-80,H/2); }
+    const toX = lat => ((data.lon-bounds.minLon)/(bounds.maxLon-bounds.minLon))*W;
+    const toY = lat => H-((data.lat-bounds.minLat)/(bounds.maxLat-bounds.minLat))*H;
+    const x=toX(data.lat), y=toY(data.lat);
+    // Geofence circle
+    ctx.beginPath(); ctx.arc(x,y,40,0,Math.PI*2); ctx.strokeStyle='rgba(26,86,219,0.4)'; ctx.lineWidth=2; ctx.setLineDash([6,4]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(26,86,219,0.08)'; ctx.fill();
+    // Vehicle dot
+    ctx.beginPath(); ctx.arc(x,y,10,0,Math.PI*2); ctx.fillStyle='#1a56db'; ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+    // Label
+    ctx.fillStyle='#0f172a'; ctx.font='bold 12px Inter,sans-serif';
+    ctx.fillText(`${data.speed?.toFixed(0)||0} km/h`,x+14,y+4);
+}
+
+// ============================================================
+// GPS SSE
+// ============================================================
+function switchActiveTrackingVehicle(newVehicle) {
+    if (gpsSSE) {
+        gpsSSE.close();
+        gpsSSE = null;
+        gpsSSEVehicleId = null;
+    }
+    if (leafletMap) {
+        if (vehicleMarker) { leafletMap.removeLayer(vehicleMarker); vehicleMarker = null; }
+        if (gpsPathLine) { leafletMap.removeLayer(gpsPathLine); gpsPathLine = null; }
+        if (routePolyline) { leafletMap.removeLayer(routePolyline); routePolyline = null; }
+        if (geofenceCircle) { leafletMap.removeLayer(geofenceCircle); geofenceCircle = null; }
+        poiMarkers.forEach(m => leafletMap.removeLayer(m));
+        poiMarkers = [];
+    }
+    gpsPathPoints = [];
+    routeData = null;
+    currentGps = null;
+    
+    activeTrackingVehicle = newVehicle;
+    
+    if (activeTrackingVehicle) {
+        startGpsSSE();
+        fetchInfotainment();
+    }
+}
+
+function startGpsSSE() {
+    if (!activeTrackingVehicle) return;
+    if (gpsSSE && gpsSSEVehicleId === activeTrackingVehicle.VehicleID) return;
+    if (gpsSSE) { gpsSSE.close(); gpsSSE=null; }
+    const vid = activeTrackingVehicle.VehicleID;
+    gpsSSEVehicleId = vid;
+    
+    // Tải thông tin lộ trình và POIs từ server để vẽ lên bản đồ client
+    fetch('/api/v2/vehicles/route?vehicleId='+vid).then(r=>r.json()).then(data => {
+        // Lấy đúng route đang hoạt động của xe
+        routeData = data.route;
+        
+        // Vẽ POIs (Đại lý, trạm dịch vụ) lên bản đồ nếu có
+        if (data.pois && leafletMap) {
+            data.pois.forEach(poi => {
+                const icon = L.divIcon({
+                    html: `<div style="font-size:16px;">[TRẠM]</div>`,
+                    className: '', iconSize: [20,20], iconAnchor: [10,10]
+                });
+                const marker = L.marker([poi.lat, poi.lon], {icon}).bindPopup(`<b>${poi.name}</b>`).addTo(leafletMap);
+                poiMarkers.push(marker);
+            });
+        }
+    }).catch(console.error);
+
+    gpsSSE = new EventSource(`/api/v2/vehicles/gps-stream/${vid}`, { withCredentials: true });
+    
+    // Xử lý luồng tọa độ liên tục (mỗi giây)
+    gpsSSE.onmessage = e => {
+        try { const data=JSON.parse(e.data); handleGpsData(data); } catch{}
+    };
+    
+    // Bắt sự kiện báo cáo định kỳ 10 phút / thông báo thay đổi tuyến đường
+    gpsSSE.addEventListener('report', (e) => {
+        try {
+            const reportData = JSON.parse(e.data);
+            showToast('Thông Báo Khách Hàng', reportData.message, 'info', 10000); // Hiện lâu hơn chút
+        } catch(err) { console.error('Lỗi khi đọc report SSE', err); }
+    });
+
+    gpsSSE.onerror = () => {};
+}
+
+function handleGpsData(data) {
+    if (!data) return;
+    const isJammedV1 = data.isJammedV1 !== undefined ? data.isJammedV1 : data.IsJammedV1;
+    const lat = data.lat !== undefined ? data.lat : data.Lat;
+    const lon = data.lon !== undefined ? data.lon : data.Lon;
+    if (lat === undefined || (lat === null && !isJammedV1)) return;
+
+    const dataVid = data.vehicleId !== undefined ? data.vehicleId : data.VehicleID;
+    const trackVid = activeTrackingVehicle ? (activeTrackingVehicle.VehicleID !== undefined ? activeTrackingVehicle.VehicleID : activeTrackingVehicle.vehicleId) : null;
+    if (activeTrackingVehicle && dataVid != trackVid) return;
+
+    currentGps = data;
+    // Update UI fields
+    const speed = data.speed !== undefined ? data.speed : data.Speed;
+    const heading = data.heading !== undefined ? data.heading : data.Heading;
+    const currentWaypoint = data.currentWaypoint !== undefined ? data.currentWaypoint : (data.CurrentWaypoint || data.Address || data.address);
+    const nextWaypoint = data.nextWaypoint !== undefined ? data.nextWaypoint : data.NextWaypoint;
+    const routeProgress = data.routeProgress !== undefined ? data.routeProgress : data.RouteProgress;
+
+    document.getElementById('gps-lat').textContent = lat?.toFixed(6)||'--';
+    document.getElementById('gps-lon').textContent = lon?.toFixed(6)||'--';
+    document.getElementById('gps-speed').textContent = (speed?.toFixed(1)||'--')+' km/h';
+    document.getElementById('gps-heading').textContent = (heading?.toFixed(0)||'--')+'&#176;';
+    document.getElementById('gps-waypoint').textContent = currentWaypoint||'--';
+    document.getElementById('gps-nextwp').textContent = nextWaypoint||'--';
+    if (routeProgress!=null) document.getElementById('route-progress-bar').style.width=(routeProgress*100)+'%';
+    // Enc sample
+    if (data.encryptedPayloadSample) document.getElementById('enc-sample').textContent = data.encryptedPayloadSample;
+
+    // Update fancy UI elements
+    const uiLoc = document.getElementById('ui-current-location');
+    if (uiLoc) uiLoc.textContent = data.currentWaypoint || 'Không xác định';
+    const uiNext = document.getElementById('ui-next-location');
+    if (uiNext) uiNext.textContent = `Đang hướng tới: ${data.nextWaypoint || '--'}`;
+    const uiSpd = document.getElementById('ui-current-speed');
+    if (uiSpd) uiSpd.innerHTML = `${data.speed?.toFixed(1) || '--'} <span style="font-size:14px; font-weight:600; color:var(--text-3);">km/h</span>`;
+
+    const isJammed = data.isJammedV2;
+    const isViolating = data.outsideGeofence;
+    const mb = document.getElementById('gps-mode-badge');
+    const mt = document.getElementById('gps-mode-txt');
+    if (data.isJammedV1) {
+        mb.textContent='LOST GPS (V1)'; mb.style.color='var(--red)'; mb.style.borderColor='var(--red)';
+        if(mt) mt.textContent='LOST_GPS';
+        const wp=document.getElementById('wifi-panel'); if(wp) wp.style.display='none';
+    } else if (isJammed) {
+        mb.textContent='DEAD RECKONING'; mb.style.color='var(--orange)'; mb.style.borderColor='var(--orange)';
+        if(mt) mt.textContent='DEAD_RECKONING';
+        const wp=document.getElementById('wifi-panel');
+        if(wp&&data.wifiBssids) {
+            wp.style.display='block';
+            document.getElementById('wifi-bssids-grid').innerHTML=data.wifiBssids.map(b=>`<div style="padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11px;font-family:monospace;">${b.bssid}<br><span style="color:var(--orange);">-${b.rssi}dBm</span></div>`).join('');
+        }
+    } else {
+        mb.textContent='GPS thuc thoi'; mb.style.color='var(--green)'; mb.style.borderColor='rgba(22,163,74,0.4)';
+        if(mt) mt.textContent='GPS';
+        const wp=document.getElementById('wifi-panel'); if(wp) wp.style.display='none';
+    }
+
+    const wb = document.getElementById('waypoint-bar');
+    if (wb) wb.textContent = `${data.currentWaypoint||''}  >  ${data.nextWaypoint||''}`;
+
+    const fSt = document.getElementById('gps-fence-status');
+    if (data.outsideGeofence) { fSt.textContent='Ngoai vung!'; fSt.style.color='var(--red)'; }
+    else { fSt.textContent='Trong vung'; fSt.style.color='var(--green)'; }
+    document.getElementById('gps-dist').textContent = (data.distanceFromCenter?.toFixed(2)||'--')+' km';
+
+    // Update modal geofence panel if present
+    const modalHome = document.getElementById('modal-owner-home');
+    const modalDist = document.getElementById('modal-current-dist');
+    const modalStatus = document.getElementById('modal-geofence-status');
+    
+    if (data.geofence) {
+        if (modalHome) {
+            modalHome.textContent = `Hồ Hoàn Kiếm, HN (${data.geofence.lat.toFixed(5)}°N, ${data.geofence.lon.toFixed(5)}°E)`;
+        }
+        const rInput = document.getElementById('modal-geofence-r');
+        if (rInput && document.activeElement !== rInput) {
+            rInput.value = data.geofence.radiusKm || 5;
+        }
+    }
+    if (modalDist) {
+        modalDist.textContent = (data.distanceFromCenter?.toFixed(2) || '--') + ' km';
+    }
+    if (modalStatus) {
+        if (data.outsideGeofence) {
+            modalStatus.innerHTML = '<span style="color:var(--red); font-weight:bold;">[CẢNH BÁO] NGOÀI VÙNG (ĐÃ BÁO CÁO)</span>';
+        } else {
+            modalStatus.innerHTML = '<span style="color:var(--green); font-weight:bold;">Trong vùng (An toàn)</span>';
+        }
+    }
+
+    // Trip limit status
+    if (data.tripLimit) {
+        const tripBox = document.getElementById('trip-limit-status-box');
+        if (data.tripLimit.active) {
+            tripBox.style.display='block';
+            document.getElementById('trip-route-display').textContent = data.tripLimit.from+' > '+data.tripLimit.to;
+            document.getElementById('trip-time-remaining').textContent = data.tripLimit.timeRemainingMin?.toFixed(0)||'--';
+            document.getElementById('trip-distance').textContent = data.tripLimit.distance?.toFixed(2)||'--';
+            document.getElementById('trip-max-radius').textContent = data.tripLimit.maxRadius||'--';
+            const statusText = document.getElementById('trip-status-text');
+            if (data.tripLimit.violated) {
+                statusText.textContent = data.tripLimit.tripTimeExpired?'HET GIO!':'VUOT GIOI HAN!';
+                statusText.style.color='var(--red)';
+            } else {
+                statusText.textContent='Dang chay...'; statusText.style.color='var(--green)';
+            }
+        }
+    }
+
+    // Security events
+    if (data.type==='HARDWARE_TAMPER') {
+        const ov=document.getElementById('tamper-overlay'); if(ov) ov.style.display='flex';
+        document.getElementById('dek-status').textContent='Zeroized';
+        document.getElementById('dek-status').style.color='var(--red)';
+    }
+    const lockOv = document.getElementById('engine-locked-overlay');
+    if (lockOv) {
+        lockOv.style.display = data.isLocked ? 'flex' : 'none';
+    }
+
+    // Map update
+    if (leafletMap && clientMapMode==='map') {
+        if (lat !== null && lon !== null && lat !== undefined && lon !== undefined) {
+            const dataVid = data.vehicleId !== undefined ? data.vehicleId : data.VehicleID;
+            const speed = data.speed !== undefined ? data.speed : data.Speed;
+            const currentWaypoint = data.currentWaypoint !== undefined ? data.currentWaypoint : (data.CurrentWaypoint || data.Address || data.address);
+            const nextWaypoint = data.nextWaypoint !== undefined ? data.nextWaypoint : data.NextWaypoint;
+            const geofenceRadius = data.geofenceRadius !== undefined ? data.geofenceRadius : data.GeofenceRadius;
+
+            if (!vehicleMarker) {
+                const carIcon = L.divIcon({
+                    html: `<div style="width:14px;height:14px;background:${isViolating?'var(--red)':isJammed?'var(--orange)':'var(--green)'};border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);"></div>`,
+                    className:'', iconSize:[14,14], iconAnchor:[7,7]
+                });
+                vehicleMarker = L.marker([lat, lon], {icon:carIcon}).addTo(leafletMap);
+                vehicleMarker.bindPopup(`<div style="min-width: 180px; font-family: sans-serif;"><b style="color:var(--primary); font-size:14px; display:block; margin-bottom:5px; border-bottom:1px solid #eee; padding-bottom:4px;">Xe #${dataVid}</b><span style="font-size:12px; line-height: 1.6;"><b>[VỊ TRÍ] Khu vực:</b> <span style="color:#2563eb">${currentWaypoint||'Không xác định'}</span><br><b>[ĐÍCH] Đang đi tới:</b> ${nextWaypoint||'Không xác định'}<br><b>[TỐC ĐỘ] Tốc độ:</b> <span style="color:var(--red); font-weight:700;">${speed?.toFixed(1)} km/h</span></span></div>`);
+            } else {
+                vehicleMarker.setLatLng([lat, lon]);
+                const dotColor = isViolating?'var(--red)':isJammed?'var(--orange)':'var(--green)';
+                const iconEl = vehicleMarker.getElement()?.querySelector('div');
+                if (iconEl) iconEl.style.background = dotColor;
+                vehicleMarker.setPopupContent(`<div style="min-width: 180px; font-family: sans-serif;"><b style="color:${dotColor}; font-size:14px; display:block; margin-bottom:5px; border-bottom:1px solid #eee; padding-bottom:4px;">Xe #${dataVid}</b><span style="font-size:12px; line-height: 1.6;"><b>[VỊ TRÍ] Khu vực:</b> <span style="color:#2563eb">${currentWaypoint||'Không xác định'}</span><br><b>[ĐÍCH] Đang đi tới:</b> ${nextWaypoint||'Không xác định'}<br><b>[TỐC ĐỘ] Tốc độ:</b> <span style="color:var(--red); font-weight:700;">${speed?.toFixed(1)} km/h</span><br><br><span style="font-size: 10px; color:#64748b;">Mã hóa: ${isJammed?'Mất tín hiệu GPS':'AES-256-GCM'}</span></span></div>`);
+            }
+            leafletMap.panTo([lat, lon]);
+            gpsPathPoints.push([lat, lon]);
+            if (gpsPathLine) { leafletMap.removeLayer(gpsPathLine); }
+            if (gpsPathPoints.length>1) gpsPathLine = L.polyline(gpsPathPoints,{color:'#1a56db',weight:2,opacity:0.5}).addTo(leafletMap);
+            if (routeData && !routePolyline) {
+                routePolyline = L.polyline(routeData.map(wp=>[wp.lat,wp.lon]),{color:'#94a3b8',weight:2,dashArray:'6,4',opacity:0.6}).addTo(leafletMap);
+            }
+            if (!geofenceCircle && geofenceRadius) {
+                geofenceCircle = L.circle([lat, lon],{radius:geofenceRadius*1000,color:'var(--primary)',weight:1,fillOpacity:0.05,dashArray:'8,4'}).addTo(leafletMap);
+            }
+        }
+    } else if (clientMapMode==='radar') {
+        drawCanvasFallback(data);
+    }
+}
+
+async function fetchInfotainment() {
+    if (activeTrackingVehicle && myOwnedVehicle && activeTrackingVehicle.VehicleID === myOwnedVehicle.VehicleID) {
+        document.getElementById('smart-contacts').textContent = 'Không áp dụng (Xe chính chủ)';
+        document.getElementById('smart-contacts-bt').textContent = 'Không áp dụng (Xe chính chủ)';
+        return;
+    }
+    try {
+        const r = await fetch('/api/v2/vehicles/infotainment', {credentials:'include'});
+        if (!r.ok) return;
+        const d = await r.json();
+        document.getElementById('smart-contacts').textContent = d.SyncedContacts||'--';
+        document.getElementById('smart-contacts-bt').textContent = d.ActiveBluetoothDevice||'--';
+    } catch{}
+}
+
+// ============================================================
+// GPS CONTROLS (Remote commands)
+// ============================================================
+let simulatedUserLat = null;
+let simulatedUserLon = null;
+function simulateUserLocation(type) {
+    const txt = document.getElementById('simulated-user-coords-txt');
+    const modalTxt = document.getElementById('modal-simulated-coords-txt');
+    let label = '';
+    let color = '';
+    if (type === 'near') {
+        if (currentGps) {
+            simulatedUserLat = currentGps.lat + 0.00005; // ~5m
+            simulatedUserLon = currentGps.lon + 0.00005;
+            label = `Tọa độ: (${simulatedUserLat.toFixed(5)}, ${simulatedUserLon.toFixed(5)}) - Ở gần xe`;
+            color = 'var(--green)';
+        } else {
+            alert('Chua co thong tin GPS xe. Hay cho mot chut.');
+            return;
+        }
+    } else if (type === 'far') {
+        simulatedUserLat = 21.0285 - 0.5; // ~50km
+        simulatedUserLon = 105.8524 - 0.5;
+        label = `Tọa độ: (${simulatedUserLat.toFixed(5)}, ${simulatedUserLon.toFixed(5)}) - Ở xa xe`;
+        color = 'var(--red)';
+    } else {
+        simulatedUserLat = null;
+        simulatedUserLon = null;
+        label = 'Tọa độ: Gửi theo vị trí thực tế';
+        color = 'var(--text-3)';
+    }
+    if (txt) {
+        txt.textContent = label;
+        txt.style.color = color;
+    }
+    if (modalTxt) {
+        modalTxt.textContent = label;
+        modalTxt.style.color = color;
+    }
+}
+
+async function sendRemoteCmd(cmd) {
+    if (!activeTrackingVehicle) { alert('Khong co xe dang theo doi.'); return; }
+    const vehicleId = activeTrackingVehicle.VehicleID;
+    const ts = Date.now();
+        const signatureRes = await fetch('/api/v2/telematics/generate-signature', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({vehicleId, command:cmd, timestamp:ts})
+    });
+    const signatureData = await signatureRes.json();
+    if (!signatureRes.ok) {
+        showToast(signatureData.error || 'Khong tao duoc chu ky vien thong', 'error');
+        return;
+    }
+    const hmac = signatureData.signature;
+    printLog('REQ', `POST /api/v2/telematics/command { cmd:${cmd} }`, 'console-box-gps');
+    
+    const payload = {vehicleId, command:cmd, timestamp:ts, signature:hmac};
+    if (simulatedUserLat !== null && simulatedUserLon !== null) {
+        payload.userLat = simulatedUserLat;
+        payload.userLon = simulatedUserLon;
+    }
+    
+    const res = await fetch('/api/v2/telematics/command', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    printLog('RES', JSON.stringify(data).slice(0,80), 'console-box-gps');
+    if (!res.ok) {
+        showToast(data.error || 'Lỗi gửi lệnh viễn thông', 'error');
+    } else {
+        showToast(data.message || 'Lệnh gửi thành công', 'success', 2500);
+    }
+}
+async function setGeofence() {
+    if (!activeTrackingVehicle) return;
+    const input = document.getElementById('modal-geofence-r') || document.getElementById('geofence-r');
+    const r = parseFloat(input.value) || 5;
+    await sendRemoteCmd('SET_GEOFENCE:'+r);
+}
+async function lockEngine() {
+    if (!activeTrackingVehicle) { alert('Khong co xe dang theo doi.'); return; }
+    if (!confirm('Xac nhan gui lenh khoa dong co xe?')) return;
+    const vehicleId = activeTrackingVehicle.VehicleID;
+    
+    const sigRes = await fetch('/api/v2/vehicles/generate-lock-signature', {
+        method: 'POST', credentials:'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vehicleId })
+    });
+    const sigData = await sigRes.json();
+    
+    printLog('REQ', `POST /api/v2/vehicles/lock-engine { vehicleId:${vehicleId} }`, 'console-box-gps');
+    const payload = {
+        vehicleId,
+        timestamp: sigData.timestamp,
+        signature: sigData.signature
+    };
+    if (simulatedUserLat !== null && simulatedUserLon !== null) {
+        payload.userLat = simulatedUserLat;
+        payload.userLon = simulatedUserLon;
+    }
+    const res = await fetch('/api/v2/vehicles/lock-engine', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(payload)
+    });
+    const data = await res.json();
+    printLog('RES', JSON.stringify(data).slice(0,80), 'console-box-gps');
+    if (res.ok) {
+        const btn = document.getElementById('lock-engine-btn');
+        if (btn) {
+            btn.textContent='Dong co da khoa'; btn.style.opacity='0.6'; btn.disabled=true;
+        }
+        showToast('Khóa động cơ thành công!', 'success');
+    } else {
+        showToast(data.error || 'Lỗi khóa động cơ', 'error');
+    }
+}
+async function setTripLimit() {
+    if (!activeTrackingVehicle) { alert('Khong co xe dang theo doi.'); return; }
+    const fromVal = document.getElementById('trip-from-name').value;
+    const toVal = document.getElementById('trip-to-name').value;
+    const limitMin = parseInt(document.getElementById('trip-limit-min').value)||10;
+    const radius = parseFloat(document.getElementById('trip-limit-radius').value)||15;
+    const vehicleId = activeTrackingVehicle.VehicleID;
+    const res = await fetch('/api/v2/vehicles/set-trip-limit', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+            vehicleId,
+            fromName: fromVal,
+            toName: toVal,
+            limitMinutes: limitMin,
+            radiusKm: radius
+        })
+    });
+    const data = await res.json();
+    printLog('RES', JSON.stringify(data).slice(0,80), 'console-box-gps');
+    if (res.ok) { document.getElementById('trip-limit-status-box').style.display='block'; }
+}
+async function clearTripLimit() {
+    if (!activeTrackingVehicle) return;
+    await fetch('/api/v2/vehicles/clear-trip-limit', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({vehicleId: activeTrackingVehicle.VehicleID})
+    });
+    document.getElementById('trip-limit-status-box').style.display='none';
+}
+
+
+
+// ============================================================
+// RECOVERED JS
+// ============================================================
+function showLoginModal() {
+    document.getElementById('login-modal').style.display = 'flex';
+    document.getElementById('login-err-msg').style.display = 'none';
+    document.getElementById('otp-container').style.display = 'none';
+}
+function hideLoginModal() { document.getElementById('login-modal').style.display = 'none'; }
+
+function showRegisterModal() {
+    document.getElementById('register-modal').style.display = 'flex';
+    document.getElementById('register-err-msg').style.display = 'none';
+}
+function hideRegisterModal() { document.getElementById('register-modal').style.display = 'none'; }
+
+async function submitLogin() {
+    const u = document.getElementById('username-in').value.trim();
+    const p = document.getElementById('password-in').value;
+    const err = document.getElementById('login-err-msg');
+    if (!u || !p) {
+        err.textContent = 'Vui lòng nhập tài khoản và mật khẩu.';
+        err.style.display = 'block';
+        return;
+    }
+    const res = await fetch('/api/v2/auth/login', {
+        method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({username:u, password:p})
+    });
+    const data = await res.json();
+    if(res.ok) {
+        if(data.mfaRequired) {
+            mfaRequiredUsername = u;
+            document.getElementById('otp-container').style.display = 'block';
+        } else {
+            await afterLogin(data);
+        }
+    } else {
+        err.textContent = data.error || 'Lỗi đăng nhập';
+        err.style.display = 'block';
+    }
+}
+
+async function submitMfaOTP() {
+    const otp = document.getElementById('otp-in').value.trim();
+    const res = await fetch('/api/v2/auth/mfa-login', {
+        method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({username: mfaRequiredUsername, otp})
+    });
+    const data = await res.json();
+    if(res.ok) await afterLogin(data);
+    else showToast(data.error || 'Mã OTP sai', 'error');
+}
+
+async function submitRegister() {
+    const u = document.getElementById('reg-username').value.trim();
+    const p = document.getElementById('reg-password').value;
+    const rp = document.getElementById('reg-confirm').value;
+    const fn = document.getElementById('reg-fullname').value.trim();
+    const phone = document.getElementById('reg-phone').value.trim();
+    const email = document.getElementById('reg-email').value.trim();
+    if(p !== rp) return showToast('Mật khẩu không khớp!', 'error');
+    
+    const res = await fetch('/api/v2/auth/register', {
+        method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({username:u, password:p, confirmPassword:rp, fullName:fn, phone, email})
+    });
+    const data = await res.json();
+    if(res.ok) {
+        showToast('Đăng ký thành công!');
+        hideRegisterModal();
+        document.getElementById('username-in').value = u;
+        document.getElementById('password-in').value = p;
+        showLoginModal();
+    } else {
+        document.getElementById('register-err-msg').textContent = data.error || 'Đăng ký thất bại';
+        document.getElementById('register-err-msg').style.display = 'block';
+    }
+}
+
+async function afterLogin(data) {
+    loggedInUser = data;
+    try {
+        const profileRes = await fetch('/api/v2/profile', {credentials:'include'});
+        if (profileRes.ok) loggedInUser = await profileRes.json();
+    } catch {}
+    hideLoginModal();
+    updateNavAfterLogin();
+    showToast('Đăng nhập thành công', 'success');
+    await fetchMyRentalStatus();
+    await refreshOwnedVehicleLink();
+    switchView('sec-1');
+}
+
+async function handleLogout() {
+    await fetch('/api/v2/auth/logout', {method:'POST'});
+    loggedInUser = null;
+    myActiveRental = null;
+    activeTrackingVehicle = null;
+    if(gpsSSE) { gpsSSE.close(); gpsSSE = null; }
+    document.querySelectorAll('.auth-btn').forEach(b => b.style.display = 'inline-block');
+    document.querySelectorAll('.user-btn').forEach(b => b.style.display = 'none');
+    switchView('sec-1');
+}
+
+function updateNavAfterLogin() {
+    if(loggedInUser) {
+        document.querySelectorAll('.auth-btn').forEach(b => b.style.display = 'none');
+        document.querySelectorAll('.user-btn').forEach(b => b.style.display = 'inline-block');
+        document.getElementById('username-display').textContent = loggedInUser.Username || loggedInUser.username || 'User';
+        const roleEl = document.getElementById('role-display');
+        if (roleEl) roleEl.textContent = loggedInUser.Role || 'User';
+    }
+}
+
+async function fetchFleet() {
+    const params = new URLSearchParams();
+    const startDate = document.getElementById('search-start-date')?.value;
+    const endDate = document.getElementById('search-end-date')?.value;
+    const transmission = document.getElementById('filter-transmission')?.value || 'all';
+    const fuel = document.getElementById('filter-fuel')?.value || 'all';
+    const maxPrice = document.getElementById('filter-price')?.value || '';
+    if (startDate) params.set('startDate', startDate);
+    if (endDate) params.set('endDate', endDate);
+    if (transmission !== 'all') params.set('transmission', transmission);
+    if (fuel !== 'all') params.set('fuel', fuel);
+    if (maxPrice) params.set('maxPrice', maxPrice);
+    if (activeFilterCat && activeFilterCat !== 0) params.set('categoryId', activeFilterCat);
+
+    const endpoint = params.toString() ? `/api/v2/vehicles/search?${params}` : '/api/v2/vehicles';
+    const res = await fetch(endpoint);
+    if(!res.ok) return;
+    const cars = await res.json();
+    const ctn = document.getElementById('fleet-container');
+    ctn.innerHTML = cars.length ? cars.map(renderCarCard).join('') : '<div style="grid-column:span 3;text-align:center;padding:60px 0;color:var(--text-3);">Không tìm thấy xe phù hợp.</div>';
+    const countEl = document.getElementById('results-count');
+    if (countEl) countEl.textContent = `${cars.length} xe phù hợp`;
+}
+
+function renderCarCard(c) {
+    const isAvail = c.Status === 'Available';
+    const badgeClass = isAvail ? 'badge-available' : 'badge-rented';
+    const badgeText = isAvail ? 'Sẵn sàng' : 'Đã thuê';
+    const priceFormatted = (c.PricePerDay || 800000).toLocaleString('vi-VN');
+    
+    return `
+    <div class="car-card" onclick="showCarDetail(${c.VehicleID})">
+        <div class="car-image-wrap">
+            <div class="car-status-badge ${badgeClass}">${badgeText}</div>
+            <img src="${c.ImageURL || 'https://via.placeholder.com/300x160?text=No+Image'}" alt="${c.Model}" class="car-img" onerror="this.src='https://via.placeholder.com/300x160?text=No+Image'">
+        </div>
+        <div class="car-info">
+            <div class="car-model">${c.Model}</div>
+            <div class="car-price">${priceFormatted} đ <span>/ ngày</span></div>
+            <div class="car-specs">
+                <span class="spec-badge">${c.Transmission}</span>
+                <span class="spec-badge">${c.Seats} chỗ</span>
+                <span class="spec-badge">${c.FuelType}</span>
+            </div>
+            <div class="car-rating">&#9733; ${c.AvgRating} <span>(${c.ReviewCount} đánh giá)</span></div>
+        </div>
+    </div>`;
+}
+
+async function showCarDetail(id) {
+    const res = await fetch('/api/v2/vehicles/' + id);
+    if(!res.ok) return;
+    const c = await res.json();
+    selectedCarForDetail = c;
+    selectedCarIdForDetail = id;
+    
+    document.getElementById('md-car-title').textContent = c.Model;
+    document.getElementById('md-car-img').src = c.ImageURL || '';
+    document.getElementById('md-spec-engine').textContent = c.FuelType;
+    document.getElementById('md-spec-gearbox').textContent = c.Transmission;
+    document.getElementById('md-spec-seats').textContent = c.Seats;
+    document.getElementById('md-spec-plate').textContent = c.LicensePlate;
+    document.getElementById('md-spec-rating').textContent = c.AvgRating;
+    document.getElementById('md-spec-category').textContent = c.CategoryName || 'Khác';
+        document.getElementById('md-car-desc').textContent = c.Description || '';
+    const reviewsBox = document.getElementById('md-reviews-list');
+    if (reviewsBox) {
+        const reviews = c.reviews || [];
+        reviewsBox.innerHTML = reviews.length ? reviews.map(r => `
+            <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+                <div style="display:flex;justify-content:space-between;gap:8px;font-size:12px;">
+                    <strong>${r.FullName || r.Username || 'Khách hàng'}</strong>
+                    <span style="color:var(--orange);font-weight:700;">${'★'.repeat(r.Rating || 0)}${'☆'.repeat(5 - (r.Rating || 0))}</span>
+                </div>
+                <div style="font-size:12px;color:var(--text-2);margin-top:4px;line-height:1.5;">${r.Comment || 'Không có nhận xét.'}</div>
+            </div>`).join('') : '<div style="font-size:12px;color:var(--text-3);">Chưa có đánh giá.</div>';
+    }
+    
+    document.getElementById('car-detail-modal').style.display = 'flex';
+}
+
+function hideCarDetailModal() {
+    document.getElementById('car-detail-modal').style.display = 'none';
+}
+
+async function executeRentFromModal() {
+    if(!loggedInUser) return showLoginModal();
+    const st = document.getElementById('book-start-date').value;
+    const en = document.getElementById('book-end-date').value;
+    const simType = document.getElementById('book-route-type').value || 'hanoi';
+    
+    const res = await fetch('/api/v2/vehicles/rent-dated', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({vehicleId: selectedCarIdForDetail, startDate: st, endDate: en, simulationType: simType})
+    });
+    const data = await res.json();
+    if(res.ok) {
+        showToast('Thuê xe thành công!', 'success');
+        hideCarDetailModal();
+        await fetchMyRentalStatus();
+        switchView('sec-2');
+    } else {
+        showToast(data.error, 'error');
+    }
+}
+
+async function handleReturnCar() {
+    if(!myActiveRental) return;
+    const res = await fetch('/api/v2/vehicles/return', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({rentalId: myActiveRental.RentalID})
+    });
+    if(res.ok) {
+        showToast('Đã trả xe thành công!');
+        myActiveRental = null;
+        activeTrackingVehicle = null;
+        if(gpsSSE) { gpsSSE.close(); gpsSSE = null; }
+        switchView('sec-1');
+    }
+}
+
+async function loadProfile() {
+    if(!loggedInUser) return;
+    try {
+        const res = await fetch('/api/v2/profile', {credentials:'include'});
+        if (res.ok) loggedInUser = await res.json();
+    } catch {}
+    document.getElementById('profile-username').textContent = loggedInUser.Username || '';
+    document.getElementById('profile-role').textContent = loggedInUser.Role || 'User';
+    document.getElementById('profile-fullname').value = loggedInUser.FullName || '';
+    document.getElementById('profile-phone').value = loggedInUser.Phone || '';
+    document.getElementById('profile-email').value = loggedInUser.Email || '';
+}
+
+async function updateProfile() {
+    const errEl = document.getElementById('profile-err');
+    const okEl = document.getElementById('profile-ok');
+    errEl.style.display = 'none';
+    okEl.style.display = 'none';
+    const payload = {
+        fullName: document.getElementById('profile-fullname').value.trim(),
+        phone: document.getElementById('profile-phone').value.trim(),
+        email: document.getElementById('profile-email').value.trim()
+    };
+    const res = await fetch('/api/v2/profile', {
+        method:'PUT', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.ok) {
+        okEl.textContent = data.message || 'Cập nhật hồ sơ thành công.';
+        okEl.style.display = 'block';
+        await loadProfile();
+    } else {
+        errEl.textContent = data.error || 'Không cập nhật được hồ sơ.';
+        errEl.style.display = 'block';
+    }
+}
+
+
+function openMyActiveRental() {
+    if (myActiveRental) {
+        switchActiveTrackingVehicle(myActiveRental);
+        switchView('sec-2');
+    }
+}
+function openMyOwnedVehicle() {
+    if (myOwnedVehicle) {
+        switchActiveTrackingVehicle(myOwnedVehicle);
+        switchView('sec-2');
+    }
+}
+
+async function fetchMyRentalStatus() {
+    if(!loggedInUser) return;
+    try {
+        const res = await fetch('/api/v2/vehicles/my-rental', {credentials:'include'});
+        if(res.ok) {
+            const data = await res.json();
+            if(data.RentalID) {
+                myActiveRental = data;
+                if (!activeTrackingVehicle || activeTrackingVehicle.VehicleID !== data.VehicleID) {
+                    switchActiveTrackingVehicle(data);
+                }
+                document.getElementById('link-rented').style.display = 'inline-block';
+            } else {
+                myActiveRental = null;
+                if (activeTrackingVehicle && activeTrackingVehicle.VehicleID !== (myOwnedVehicle ? myOwnedVehicle.VehicleID : null)) {
+                    switchActiveTrackingVehicle(null);
+                }
+                document.getElementById('link-rented').style.display = 'none';
+            }
+        } else {
+            myActiveRental = null;
+            if (activeTrackingVehicle && activeTrackingVehicle.VehicleID !== (myOwnedVehicle ? myOwnedVehicle.VehicleID : null)) {
+                switchActiveTrackingVehicle(null);
+            }
+            document.getElementById('link-rented').style.display = 'none';
+        }
+    } catch(e) {}
+}
+
+function formatMoney(value) {
+    return `${Number(value || 0).toLocaleString('vi-VN')} đ`;
+}
+
+function formatDate(value) {
+    if (!value) return '--';
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? value : d.toLocaleDateString('vi-VN');
+}
+
+async function fetchHistory() {
+    const list = document.getElementById('history-list');
+    if (!loggedInUser) {
+        list.innerHTML = '<div style="text-align:center;padding:60px 0;color:var(--text-3);">Vui lòng đăng nhập để xem lịch sử.</div>';
+        return;
+    }
+    list.innerHTML = '<div style="text-align:center;padding:60px 0;color:var(--text-3);">Đang tải lịch sử...</div>';
+    try {
+        const res = await fetch('/api/v2/rentals/my', {credentials:'include'});
+        const rows = res.ok ? await res.json() : [];
+        if (!rows.length) {
+            list.innerHTML = '<div style="text-align:center;padding:60px 0;color:var(--text-3);">Bạn chưa có chuyến thuê xe nào.</div>';
+            return;
+        }
+        list.innerHTML = rows.map(r => {
+            const active = r.Status === 'Active';
+            const pending = r.Status === 'Pending';
+            const statusClass = active ? 'status-active' : (pending ? 'status-pending' : 'status-terminated');
+            const statusText = active ? 'Đang thuê' : (pending ? 'Chờ duyệt' : 'Đã hoàn thành');
+            const canReview = !active && !pending;
+            return `
+            <div class="rental-history-card">
+                <img class="rental-car-img" src="${r.ImageURL || 'https://via.placeholder.com/80x56?text=Car'}" alt="${r.Model || 'Xe'}" onerror="this.src='https://via.placeholder.com/80x56?text=Car'">
+                <div class="rental-info">
+                    <div class="model">${r.Model || 'Xe #' + r.VehicleID}</div>
+                    <div class="plate">${r.LicensePlate || '--'}</div>
+                    <div class="dates">${formatDate(r.StartDate)} - ${formatDate(r.EndDate)}</div>
+                    <div class="loc">${r.PickupLocation || 'Ha Noi'} → ${r.ReturnLocation || r.PickupLocation || 'Ha Noi'}</div>
+                </div>
+                <div class="rental-right">
+                    <div class="rental-status ${statusClass}">${statusText}</div>
+                    <div class="rental-amount">${formatMoney(r.TotalAmount)}</div>
+                    ${canReview ? `<button class="btn-review" onclick="showReviewModal(${r.VehicleID}, '${String(r.Model || 'Xe').replace(/'/g, '&#39;')}')">Đánh giá</button>` : ''}
+                </div>
+            </div>`;
+        }).join('');
+    } catch (err) {
+        list.innerHTML = '<div style="text-align:center;padding:60px 0;color:var(--red);">Không tải được lịch sử thuê xe.</div>';
+        printLog('ERR', err.message);
+    }
+}
+
+async function loadReviewableVehicles() {
+    if (document.getElementById('sec-3')?.classList.contains('active')) await fetchHistory();
+}
+
+function showReviewModal(id, name) {
+    reviewVehicleId = id;
+    currentRating = 0;
+    document.getElementById('review-vehicle-name').textContent = `Xe: ${name || '--'}`;
+    document.getElementById('review-comment').value = '';
+    document.getElementById('review-err').style.display = 'none';
+    document.querySelectorAll('.star-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('review-modal').style.display = 'flex';
+}
+
+function setRating(r) {
+    currentRating = r;
+    document.querySelectorAll('.star-btn').forEach(btn => btn.classList.toggle('active', Number(btn.dataset.v) <= r));
+}
+
+async function submitReview() {
+    const errEl = document.getElementById('review-err');
+    errEl.style.display = 'none';
+    if (!reviewVehicleId || currentRating < 1) {
+        errEl.textContent = 'Vui lòng chọn số sao đánh giá.';
+        errEl.style.display = 'block';
+        return;
+    }
+    const res = await fetch('/api/v2/reviews', {
+        method:'POST', credentials:'include',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({
+            vehicleId: reviewVehicleId,
+            rating: currentRating,
+            comment: document.getElementById('review-comment').value.trim()
+        })
+    });
+    const data = await res.json();
+    if (res.ok) {
+        document.getElementById('review-modal').style.display = 'none';
+        showToast(data.message || 'Đã gửi đánh giá.', 'success');
+        await fetchHistory();
+        if (selectedCarIdForDetail) await showCarDetail(selectedCarIdForDetail);
+    } else {
+        errEl.textContent = data.error || 'Không gửi được đánh giá.';
+        errEl.style.display = 'block';
+    }
+}
+
+function filterByCategory(catId, el) {
+    activeFilterCat = Number(catId) || 0;
+    document.querySelectorAll('.filter-chip').forEach(btn => btn.classList.remove('active'));
+    if (el) el.classList.add('active');
+    fetchFleet();
+}
+
+function applyFilters() { fetchFleet(); }
+
+function doSearch() {
+    const start = document.getElementById('search-start-date').value;
+    const end = document.getElementById('search-end-date').value;
+    if (start && end && new Date(end) <= new Date(start)) {
+        showToast('Ngày trả xe phải sau ngày nhận xe.', 'warn');
+        return;
+    }
+    searchParams = { startDate: start, endDate: end };
+    fetchFleet();
+}
+
+async function loadCategories() {
+    const box = document.getElementById('category-chips');
+    if (!box) return;
+    try {
+        const res = await fetch('/api/v2/categories');
+        const cats = res.ok ? await res.json() : [];
+        box.innerHTML = '<button class="filter-chip active" data-cat="0" onclick="filterByCategory(0,this)">Tất cả</button>' +
+            cats.map(cat => `<button class="filter-chip" data-cat="${cat.CategoryID}" onclick="filterByCategory(${cat.CategoryID},this)">${cat.Name}</button>`).join('');
+    } catch (err) {
+        printLog('ERR', `Không tải được loại xe: ${err.message}`);
+    }
+}
+
+async function loginGoogleClient() {
+    try {
+        printLog('REQ', 'GET /api/v2/auth/google-start?mode=v2');
+        const startRes = await fetch('/api/v2/auth/google-start?mode=v2', {credentials:'include'});
+        const startData = await startRes.json();
+        if (!startRes.ok) throw new Error(startData.error || 'Không khởi tạo được Google OAuth');
+        printLog('REQ', `GET ${startData.redirectUrl}`);
+        const callbackRes = await fetch(startData.redirectUrl, {credentials:'include'});
+        const callbackData = await callbackRes.json();
+        if (!callbackRes.ok) throw new Error(callbackData.error || 'Google OAuth thất bại');
+        await afterLogin(callbackData.user || callbackData);
+    } catch (err) {
+        showToast(err.message, 'error');
+        printLog('ERR', err.message);
+    }
+}
+
+// ============================================================
+// INIT
+// ============================================================
+(async function init() {
+    // Set default dates in search form
+    const today = new Date();
+    const tomorrow = new Date(today.getTime()+86400000);
+    const fmt = d => d.toISOString().split('T')[0];
+    document.getElementById('search-start-date').value = fmt(today);
+    document.getElementById('search-end-date').value = fmt(tomorrow);
+    document.getElementById('book-start-date').value = fmt(today);
+    document.getElementById('book-end-date').value = fmt(tomorrow);
+    document.getElementById('search-start-date').min = fmt(today);
+    document.getElementById('search-end-date').min = fmt(tomorrow);
+    document.getElementById('book-start-date').min = fmt(today);
+    document.getElementById('book-end-date').min = fmt(tomorrow);
+
+    // Initialize all view sections to hidden except sec-1
+    document.querySelectorAll('.view-section').forEach(s => {
+        if (s.id !== 'sec-1') { s.classList.remove('active'); s.style.display = 'none'; }
+        else { s.classList.add('active'); s.style.display = 'block'; }
+    });
+
+    // Auto-login check
+    try {
+        const r = await fetch('/api/v2/profile', {credentials:'include'});
+        if (r.ok) {
+            loggedInUser = await r.json();
+            updateNavAfterLogin();
+            await fetchMyRentalStatus();
+            await refreshOwnedVehicleLink();
+        }
+    } catch{}
+
+    await loadCategories();
+    await fetchFleet();
+})();
+
+</script>
+</body>
+</html>
+

@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VNCars - Bảng điều khiển bảo mật</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="leaflet/leaflet.css" id="leaflet-css"/>
+<script src="leaflet/leaflet.js" id="leaflet-js"></script>
+<script>
+if (typeof L === 'undefined') {
+    const css = document.getElementById('leaflet-css');
+    if (css) css.href = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css";
+    const s = document.createElement('script');
+    s.src = "https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js";
+    document.head.appendChild(s);
+}
+</script>
+<style>
+:root {
+    --bg: #f1f5f9;
+    --surface: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --blue: #3b82f6;
+    --red: #dc2626;
+    --green: #16a34a;
+    --orange: #ea580c;
+    --sidebar-bg: #0f172a;
+    --sidebar-w: 56px;
+    --header-h: 48px;
+    --radius: 8px;
+    --shadow: 0 1px 4px rgba(0,0,0,0.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Outfit',sans-serif;}
+body{background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden;}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar-w);background:var(--sidebar-bg);display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:4px;flex-shrink:0;}
+.sidebar-logo{color:#fff;font-size:10px;font-weight:800;letter-spacing:.5px;text-align:center;padding:8px 0 12px;border-bottom:1px solid #1e293b;width:100%;margin-bottom:8px;}
+.sb-btn{width:40px;height:40px;border-radius:8px;border:none;background:transparent;color:#64748b;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;letter-spacing:-.2px;}
+.sb-btn:hover{background:#1e293b;color:#fff;}
+.sb-btn.active{background:#3b82f6;color:#fff;}
+.sb-btn.reset-btn{background:rgba(220,38,38,.15);color:#f87171;border:1px solid rgba(220,38,38,.3);margin-top:auto;margin-bottom:4px;}
+.sb-btn.reset-btn:hover{background:var(--red);color:#fff;}
+
+/* ── Main ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.topbar{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;box-shadow:var(--shadow);}
+.topbar-title{font-size:14px;font-weight:700;color:var(--text);}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;letter-spacing:.3px;}
+.badge-blue{background:rgba(59,130,246,.1);border:1px solid var(--blue);color:var(--blue);}
+.badge-green{background:rgba(22,163,74,.1);border:1px solid var(--green);color:var(--green);}
+.topbar a{font-size:11px;color:var(--blue);text-decoration:none;font-weight:600;}
+
+/* ── Content ── */
+.content{flex:1;overflow:hidden;display:flex;flex-direction:column;}
+.view{display:none;flex:1;overflow:hidden;padding:12px 14px;}
+.view.active{display:flex;flex-direction:column;}
+
+/* ── Panels ── */
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;}
+.panel-head{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+
+/* ── DB Panel ── */
+.db-wrap{flex:1;overflow-y:auto;padding-right:3px;}
+.db-section{margin-bottom:14px;}
+.db-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:5px;}
+table{width:100%;border-collapse:collapse;font-size:10.5px;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+th,td{padding:5px 8px;text-align:left;border-bottom:1px solid var(--border);}
+th{background:#f8fafc;font-weight:700;color:var(--text);}
+td{color:var(--muted);}
+tr:last-child td{border-bottom:none;}
+
+/* ── Scenario tabs ── */
+.stab-bar{display:flex;gap:6px;margin-bottom:10px;}
+.stab{padding:4px 12px;border-radius:6px;border:1px solid var(--border);background:var(--bg);font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s;}
+.stab:hover{border-color:var(--blue);color:var(--blue);}
+.stab.active{background:var(--blue);color:#fff;border-color:var(--blue);}
+
+/* ── Attack/Defense grid ── */
+.atk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;overflow-y:auto;min-height:0;}
+.atk-col{border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px;}
+.atk-col.v1{background:rgba(220,38,38,.04);border:1.5px solid rgba(220,38,38,.2);}
+.atk-col.v2{background:rgba(22,163,74,.04);border:1.5px solid rgba(22,163,74,.2);}
+.col-head{font-size:11px;font-weight:800;text-align:center;padding-bottom:6px;border-bottom:1px solid var(--border);margin-bottom:2px;}
+.col-head.v1{color:var(--red);}
+.col-head.v2{color:var(--green);}
+.scenario-group{display:flex;flex-direction:column;gap:6px;}
+.sc-card{background:#fff;border-radius:6px;padding:8px;}
+.sc-card.v1{border:1px solid #fecaca;}
+.sc-card.v2{border:1px solid #bbf7d0;}
+.sc-title{font-size:10px;font-weight:800;margin-bottom:3px;}
+.sc-title.v1{color:var(--red);}
+.sc-title.v2{color:var(--green);}
+.sc-desc{font-size:9.5px;color:var(--muted);margin-bottom:5px;line-height:1.35;}
+.sc-input{width:100%;padding:4px 6px;border-radius:4px;font-family:monospace;font-size:10px;margin-bottom:5px;outline:none;}
+.sc-input.v1{border:1px solid #fecaca;}
+.sc-input.v2{border:1px solid #bbf7d0;}
+.sc-row{display:flex;align-items:center;gap:5px;margin-bottom:5px;}
+.sc-row label{font-size:9.5px;color:var(--muted);white-space:nowrap;}
+.btn-atk{width:100%;padding:5px 8px;border-radius:4px;font-size:10px;font-weight:700;cursor:pointer;border:none;text-transform:uppercase;letter-spacing:.2px;transition:all .15s;}
+.btn-atk.v1{background:rgba(220,38,38,.1);color:var(--red);}
+.btn-atk.v1:hover{background:var(--red);color:#fff;}
+.btn-atk.v2{background:rgba(22,163,74,.1);color:var(--green);}
+.btn-atk.v2:hover{background:var(--green);color:#fff;}
+
+/* ── Terminal ── */
+.terminal{background:#0a0f1a;border-radius:6px;padding:10px 12px;font-family:'Courier New',monospace;font-size:10.5px;color:#94a3b8;overflow-y:auto;white-space:pre-wrap;flex-shrink:0;line-height:1.6;}
+.terminal-head{font-size:10px;font-weight:700;color:#4ade80;margin-bottom:4px;display:flex;align-items:center;gap:8px;justify-content:space-between;}
+.t-clear{font-size:9px;padding:1px 8px;border-radius:3px;border:1px solid #1e293b;background:transparent;color:#475569;cursor:pointer;text-transform:none;font-weight:600;}
+.t-clear:hover{background:#1e293b;color:#94a3b8;}
+.dot{width:7px;height:7px;border-radius:50%;background:#4ade80;display:inline-block;animation:pulse 1.5s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+
+/* ── Attack status banner ── */
+.atk-banner{display:none;align-items:center;justify-content:center;gap:8px;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:800;letter-spacing:.3px;margin-bottom:6px;animation:bannerFade 0.3s ease;flex-shrink:0;}
+.atk-banner.breach{background:rgba(220,38,38,.1);border:1.5px solid var(--red);color:var(--red);}
+.atk-banner.blocked{background:rgba(22,163,74,.1);border:1.5px solid var(--green);color:var(--green);}
+@keyframes bannerFade{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── Score counter strip ── */
+.score-strip{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex-shrink:0;margin-bottom:6px;}
+.score-card{border-radius:6px;padding:6px 10px;display:flex;align-items:center;justify-content:space-between;}
+.score-card.atk-side{background:rgba(220,38,38,.05);border:1px solid rgba(220,38,38,.2);}
+.score-card.def-side{background:rgba(22,163,74,.05);border:1px solid rgba(22,163,74,.2);}
+.score-label{font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+.score-card.atk-side .score-label{color:#f87171;}
+.score-card.def-side .score-label{color:#4ade80;}
+.score-val{font-size:20px;font-weight:800;line-height:1;}
+.score-card.atk-side .score-val{color:var(--red);}
+.score-card.def-side .score-val{color:var(--green);}
+.score-sub{font-size:8px;color:var(--muted);margin-top:1px;}
+.btn-reset{padding:3px 10px;border-radius:4px;border:1px solid rgba(220,38,38,.3);background:rgba(220,38,38,.06);color:var(--red);font-size:9px;font-weight:700;cursor:pointer;letter-spacing:.2px;transition:all .15s;}
+.btn-reset:hover{background:var(--red);color:#fff;border-color:var(--red);}
+
+/* ── Scenario cards improved ── */
+.cvss-badge{display:inline-block;font-size:8px;font-weight:800;padding:1px 5px;border-radius:3px;margin-bottom:4px;text-transform:uppercase;letter-spacing:.3px;}
+.cvss-critical{background:rgba(220,38,38,.15);color:#ef4444;border:1px solid rgba(220,38,38,.3);}
+.cvss-high{background:rgba(234,88,12,.15);color:#ea580c;border:1px solid rgba(234,88,12,.3);}
+.sc-card-meta{font-size:8.5px;color:var(--muted);margin-bottom:4px;display:flex;align-items:center;gap:5px;}
+.sc-card-meta span{opacity:.7;}
+
+/* ── Center mini-map column ── */
+.center-map-col{display:flex;flex-direction:column;gap:8px;min-width:0;}
+.sandbox-mini-map{border-radius:8px;overflow:hidden;border:1px solid var(--border);background:#e8f5e9;flex:1;min-height:0;position:relative;}
+.sandbox-mini-map #sandbox-map{width:100%;height:100%;}
+.sandbox-map-label{font-size:9.5px;font-weight:700;text-align:center;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding:0 0 4px;flex-shrink:0;}
+
+
+/* ── Fleet ── */
+.fleet-wrap{display:grid;grid-template-columns:1fr 300px;gap:12px;flex:1;overflow:hidden;min-height:0;}
+.fleet-left{display:flex;flex-direction:column;gap:10px;overflow:hidden;min-height:0;}
+.fleet-right{display:flex;flex-direction:column;gap:10px;overflow:hidden;}
+.map-panel{position:relative;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border);background:#f8fafc;flex-shrink:0;height:320px;}
+.map-controls{position:absolute;top:8px;right:8px;z-index:1000;display:flex;gap:4px;align-items:center;}
+.map-btn{padding:3px 6px;border-radius:4px;font-size:10px;font-weight:600;background:#fff;border:1px solid var(--border);cursor:pointer;color:var(--muted);}
+.map-btn:hover{background:var(--bg);}
+select.map-sel{font-size:10px;padding:3px 6px;border-radius:4px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;outline:none;}
+
+/* ── Stat cards ── */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;flex-shrink:0;}
+.stat-card{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;text-align:center;box-shadow:var(--shadow);border-top-width:3px;}
+.stat-val{font-size:20px;font-weight:800;}
+.stat-lbl{font-size:8.5px;text-transform:uppercase;color:var(--muted);margin-top:1px;font-weight:600;}
+.stat-card.blue{border-top-color:var(--blue);}
+.stat-card.green{border-top-color:var(--green);}
+.stat-card.orange{border-top-color:var(--orange);}
+.stat-card.red{border-top-color:var(--red);}
+.stat-card.blue .stat-val{color:var(--blue);}
+.stat-card.green .stat-val{color:var(--green);}
+.stat-card.orange .stat-val{color:var(--orange);}
+.stat-card.red .stat-val{color:var(--red);}
+
+/* ── Vehicle card ── */
+.v-card{background:#fff;border:1px solid var(--border);border-radius:6px;padding:8px 10px;border-left:3px solid var(--green);font-size:10.5px;transition:border-color .3s;}
+.v-card.offline{border-left-color:var(--muted);}
+.v-card.locked{border-left-color:var(--red);}
+.v-card.compromised{border-left-color:var(--red);background:rgba(220,38,38,.04);animation:cardFlash 0.6s ease 3;}
+@keyframes cardFlash{0%,100%{background:rgba(220,38,38,.04);}50%{background:rgba(220,38,38,.14);}}
+.v-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+.v-card-id{font-weight:700;font-size:11px;}
+.v-badge{font-size:8px;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;}
+.v-badge.active{background:rgba(22,163,74,.1);color:var(--green);}
+.v-badge.offline{background:rgba(100,116,139,.1);color:var(--muted);}
+.v-badge.locked{background:rgba(220,38,38,.1);color:var(--red);}
+.v-badge.compromised{background:rgba(220,38,38,.2);color:var(--red);animation:badgePulse 1s infinite;}
+@keyframes badgePulse{0%,100%{opacity:1;}50%{opacity:.5;}}
+.v-info{color:var(--muted);line-height:1.5;margin-bottom:4px;}
+.v-wipe{font-size:9px;padding:2px 7px;border-radius:3px;border:1px solid rgba(220,38,38,.3);color:var(--red);background:rgba(220,38,38,.04);cursor:pointer;font-weight:700;text-transform:uppercase;}
+.v-wipe:hover{background:var(--red);color:#fff;}
+
+/* TCU attack event feed */
+.tcu-event-feed{display:flex;flex-direction:column;gap:3px;max-height:130px;overflow-y:auto;}
+.tcu-event{border-radius:4px;padding:5px 8px;font-size:9.5px;border-left:3px solid;animation:slideIn .25s ease;}
+@keyframes slideIn{from{opacity:0;transform:translateX(6px);}to{opacity:1;transform:translateX(0);}}
+.tcu-event.breach{background:rgba(220,38,38,.06);border-left-color:var(--red);}
+.tcu-event.blocked{background:rgba(22,163,74,.06);border-left-color:var(--green);}
+.tcu-event-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1px;}
+.tcu-event-type{font-weight:800;font-size:8.5px;text-transform:uppercase;letter-spacing:.3px;}
+.tcu-event.breach .tcu-event-type{color:var(--red);}
+.tcu-event.blocked .tcu-event-type{color:var(--green);}
+.tcu-event-time{font-size:8px;color:var(--muted);font-family:monospace;}
+.tcu-event-body{color:var(--text);line-height:1.35;font-size:9px;}
+.tcu-event-detail{font-size:8.5px;color:var(--muted);margin-top:1px;font-style:italic;}
+
+/* Misc */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-thumb{background:rgba(0,0,0,.12);border-radius:2px;}
+.offline-badge{position:absolute;top:8px;left:8px;z-index:1000;font-size:9px;background:rgba(234,88,12,.15);border:1px solid var(--orange);color:var(--orange);padding:2px 7px;border-radius:6px;font-family:monospace;font-weight:700;}
+input[type=number]{-moz-appearance:textfield;}
+input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav class="sidebar">
+    <div class="sidebar-logo">VN<br>Cars</div>
+    <button class="sb-btn active" id="nav-tab-sandbox" onclick="switchMainTab('sandbox')" title="Thử nghiệm">Demo</button>
+    <button class="sb-btn" id="nav-tab-fleet" onclick="switchMainTab('fleet')" title="Bản đồ xe">Map</button>
+    <button class="sb-btn reset-btn" onclick="resetAll()" title="Đặt lại tất cả" style="margin-top:auto;">Reset</button>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+        <span class="topbar-title">Admin - Hệ thống thuê xe</span>
+        <div class="topbar-right">
+            <span id="sync-indicator" class="badge badge-green">Đồng bộ</span>
+            <span class="badge badge-blue">WAF bật</span>
+            <a href="client.html" target="_blank">Trang khách hàng →</a>
+        </div>
+    </div>
+
+    <div class="content">
+
+    <!-- ═══ VIEW 1: SANDBOX & DB ═══ -->
+    <div id="view-sandbox" class="view active" style="gap:12px;">
+
+        <div style="display:grid;grid-template-columns:350px 1fr;gap:12px;flex:1;overflow:hidden;min-height:0;">
+
+            <!-- DB Panel (left) -->
+            <div class="panel">
+                <div class="panel-head">Cơ sở dữ liệu</div>
+                <div class="db-wrap">
+                    <div class="db-section">
+                        <div class="db-label">Accounts (Tài khoản)</div>
+                        <table id="tbl-accounts"><thead><tr><th>ID</th><th>Username</th><th>Pass Plain</th><th>Hash</th><th>Role</th></tr></thead><tbody></tbody></table>
+                    </div>
+                    <div class="db-section">
+                        <div class="db-label">Vehicles (Xe)</div>
+                        <table id="tbl-vehicles"><thead><tr><th>ID</th><th>Biển số</th><th>Model</th><th>Trạng thái</th></tr></thead><tbody></tbody></table>
+                    </div>
+                    <div class="db-section">
+                        <div class="db-label">UserDocuments — PII (Giấy phép lái xe)</div>
+                        <table id="tbl-documents"><thead><tr><th>ID</th><th>Account</th><th>License Data</th><th>Mã hóa</th></tr></thead><tbody></tbody></table>
+                    </div>
+                    <div class="db-section">
+                        <div class="db-label">Rentals (Hợp đồng thuê)</div>
+                        <table id="tbl-rentals"><thead><tr><th>ID</th><th>Xe</th><th>Account</th><th>Status</th><th>Action</th></tr></thead><tbody></tbody></table>
+                    </div>
+                    <div class="db-section">
+                        <div class="db-label">Vehicle Infotainment (Dữ liệu trên xe)</div>
+                        <table id="tbl-infotainment"><thead><tr><th>Xe</th><th>Contacts</th><th>GPS Hist.</th><th>Bluetooth</th></tr></thead><tbody></tbody></table>
+                    </div>
+                    <div class="db-section">
+                        <div class="db-label">System Logs (Nhật ký)</div>
+                        <table id="tbl-logs"><thead><tr><th>ID</th><th>Mô tả</th><th>Thời gian</th></tr></thead><tbody></tbody></table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Attack/Defense Panel (right) -->
+            <div class="panel" style="gap:6px;">
+
+                <!-- Header + Reset -->
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+                    <div style="font-size:12px;font-weight:800;color:#3b82f6;">Demo Tấn Công &amp; Phòng Thủ</div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:8.5px;color:var(--muted);">OWASP Top 10 — Web/Server</span>
+                        <button class="btn-reset" onclick="resetAll()">Reset</button>
+                    </div>
+                </div>
+
+                <!-- Score counters -->
+                <div class="score-strip">
+                    <div class="score-card atk-side">
+                        <div>
+                            <div class="score-label">V1 — Bị khai thác</div>
+                            <div class="score-sub">Tấn công thành công</div>
+                        </div>
+                        <div class="score-val" id="cnt-breach">0</div>
+                    </div>
+                    <div class="score-card def-side">
+                        <div>
+                            <div class="score-label">V2 — Đã chặn</div>
+                            <div class="score-sub">Tấn công bị bảo vệ</div>
+                        </div>
+                        <div class="score-val" id="cnt-blocked">0</div>
+                    </div>
+                </div>
+
+                <!-- Status Banner -->
+                <div id="atk-status-banner" class="atk-banner"></div>
+
+                <!-- Grid: V1 | V2 -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;flex:1;overflow:hidden;min-height:0;">
+
+                    <!-- V1 Column -->
+                    <div class="atk-col v1">
+                        <div class="col-head v1">Hệ thống cũ (V1)<br><span style="font-size:9px;font-weight:400;color:var(--muted);">Không có bảo vệ</span></div>
+
+                        <div id="v1-server" class="scenario-group">
+                            <div class="sc-card v1">
+                                <span class="cvss-badge cvss-critical">CVSS 9.8 Critical</span>
+                                <div class="sc-title v1">KB1 - SQL Injection</div>
+                                <div class="sc-card-meta"><span>OWASP A03:2021</span> - <span>Injection</span></div>
+                                <div class="sc-desc">Chèn lệnh SQL vào form đăng nhập để vượt qua xác thực và đọc dữ liệu CSDL.</div>
+                                <input class="sc-input v1" type="text" id="sqli-input-v1" value="' OR 1=1 --">
+                                <button class="btn-atk v1" onclick="runAttack('/api/v1/test/sqli',{username:document.getElementById('sqli-input-v1').value})">Thực thi SQL Injection</button>
+                            </div>
+                            <div class="sc-card v1">
+                                <span class="cvss-badge cvss-high">CVSS 7.5 High</span>
+                                <div class="sc-title v1">KB2 - IDOR</div>
+                                <div class="sc-card-meta"><span>OWASP A01:2021</span> - <span>Broken Access Control</span></div>
+                                <div class="sc-desc">Thay đổi mã ID trên URL để xem dữ liệu cá nhân của người khác.</div>
+                                <div class="sc-row"><label>Mã hợp đồng:</label><input class="sc-input v1" type="number" id="idor-input-v1" value="2" style="flex:1;margin:0;"></div>
+                                <button class="btn-atk v1" onclick="runAttack('/api/v1/test/rental/'+document.getElementById('idor-input-v1').value,{},'GET')">Xem trộm hợp đồng</button>
+                            </div>
+                            <div class="sc-card v1">
+                                <span class="cvss-badge cvss-critical">CVSS 9.0 Critical</span>
+                                <div class="sc-title v1">KB3 - Upload webshell</div>
+                                <div class="sc-card-meta"><span>OWASP A04:2021</span> - <span>Insecure Design</span></div>
+                                <div class="sc-desc">Tải file .php lên server để mô phỏng thực thi lệnh từ xa (RCE).</div>
+                                <input class="sc-input v1" type="text" id="upload-input-v1" value="shell.php">
+                                <button class="btn-atk v1" onclick="runAttack('/api/v1/test/upload',{file:document.getElementById('upload-input-v1').value})">Upload file độc hại</button>
+                            </div>
+                            <div class="sc-card v1">
+                                <span class="cvss-badge cvss-high">CVSS 7.3 High</span>
+                                <div class="sc-title v1">KB4 - Brute-force</div>
+                                <div class="sc-card-meta"><span>OWASP A07:2021</span> - <span>Auth Failure</span></div>
+                                <div class="sc-desc">Thử nhiều mật khẩu liên tục. Hệ thống cũ không có rate limit.</div>
+                                <button class="btn-atk v1" onclick="runAttack('/api/v1/test/bruteforce',{username:'admin',password:'password123'})">Dò mật khẩu</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- V2 Column -->
+                    <div class="atk-col v2">
+                        <div class="col-head v2">Hệ thống mới (V2)<br><span style="font-size:9px;font-weight:400;color:var(--muted);">Bảo mật theo chuẩn OWASP</span></div>
+
+                        <div id="v2-server" class="scenario-group">
+                            <div class="sc-card v2">
+                                <span class="cvss-badge" style="background:rgba(22,163,74,.12);color:#16a34a;border:1px solid rgba(22,163,74,.3);">Bảo vệ: WAF + Parameterized</span>
+                                <div class="sc-title v2">PH1 - Chặn SQL bằng WAF</div>
+                                <div class="sc-card-meta"><span>Prepared Statements</span> - <span>Input Sanitization</span></div>
+                                <div class="sc-desc">Tường lửa WAF chặn payload trước khi vào DB. Query dùng tham số an toàn.</div>
+                                <input class="sc-input v2" type="text" id="sqli-input-v2" value="' OR 1=1 --">
+                                <button class="btn-atk v2" onclick="runDefend('/api/v2/test/sqli',{username:document.getElementById('sqli-input-v2').value})">Kiểm tra chặn SQLi</button>
+                            </div>
+                            <div class="sc-card v2">
+                                <span class="cvss-badge" style="background:rgba(22,163,74,.12);color:#16a34a;border:1px solid rgba(22,163,74,.3);">Bảo vệ: RBAC + Ownership Check</span>
+                                <div class="sc-title v2">PH2 - Kiểm tra quyền sở hữu</div>
+                                <div class="sc-card-meta"><span>RBAC</span> - <span>Object-level Authorization</span></div>
+                                <div class="sc-desc">Mọi truy cập đều kiểm tra chủ sở hữu. Truy cập trái phép trả về 403.</div>
+                                <div class="sc-row"><label>Mã hợp đồng:</label><input class="sc-input v2" type="number" id="idor-input-v2" value="2" style="flex:1;margin:0;"></div>
+                                <button class="btn-atk v2" onclick="runDefend('/api/v2/test/rental/'+document.getElementById('idor-input-v2').value,{},'GET')">Kiểm tra chặn IDOR</button>
+                            </div>
+                            <div class="sc-card v2">
+                                <span class="cvss-badge" style="background:rgba(22,163,74,.12);color:#16a34a;border:1px solid rgba(22,163,74,.3);">Bảo vệ: Magic Bytes + UUID Rename</span>
+                                <div class="sc-title v2">PH3 - Lọc file an toàn</div>
+                                <div class="sc-card-meta"><span>File Validation</span> - <span>Stored outside webroot</span></div>
+                                <div class="sc-desc">Kiểm tra nội dung thực của file, đổi tên UUID v lưu ngoài webroot.</div>
+                                <input class="sc-input v2" type="text" id="upload-input-v2" value="shell.php">
+                                <button class="btn-atk v2" onclick="runDefend('/api/v2/test/upload',{file:document.getElementById('upload-input-v2').value})">Kiểm tra chặn webshell</button>
+                            </div>
+                            <div class="sc-card v2">
+                                <span class="cvss-badge" style="background:rgba(22,163,74,.12);color:#16a34a;border:1px solid rgba(22,163,74,.3);">Bảo vệ: Rate Limit + IP Lockout</span>
+                                <div class="sc-title v2">PH4 - Khóa IP tự động</div>
+                                <div class="sc-card-meta"><span>Rate Limiting</span> - <span>Account Lockout</span></div>
+                                <div class="sc-desc">Sai quá 5 lần sẽ khóa IP tạm thời v ghi log ngay lập tức.</div>
+                                <button class="btn-atk v2" onclick="runDefend('/api/v2/test/bruteforce',{username:'admin',password:'wrong'})">Kiểm tra rate limit</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div><!-- /2-col grid -->
+
+                <!-- Terminal -->
+                <div style="flex-shrink:0;">
+                    <div class="terminal-head">
+                        <span style="display:flex;align-items:center;gap:6px;"><span class="dot"></span>Security Log — Real-time Output</span>
+                        <button class="t-clear" onclick="document.getElementById('console-out').innerHTML='<span style=color:#334155>Cleared.</span>\n';document.getElementById('console-out-fleet').innerHTML='';">Xoá log</button>
+                    </div>
+                    <div class="terminal" id="console-out" style="height:120px;"><span style="color:#334155;">Waiting for action...</span></div>
+                </div>
+
+            </div><!-- /attack panel -->
+        </div>
+    </div><!-- /view-sandbox -->
+
+    <!-- ═══ VIEW 2: FLEET MAP ═══ -->
+    <div id="view-fleet" class="view" style="gap:12px;">
+        <div class="fleet-wrap">
+
+            <!-- Left: Map + TCU attacks + Terminal -->
+            <div class="fleet-left">
+
+                <!-- Map -->
+                <div class="map-panel">
+                    <div id="gps-all-map" style="width:100%;height:100%;"></div>
+                    <div id="admin-fallback-canvas-wrapper" style="display:none;width:100%;height:100%;position:absolute;top:0;left:0;">
+                        <canvas id="admin-fallback-canvas" style="width:100%;height:100%;display:block;background:#f8fafc;"></canvas>
+                    </div>
+                    <div id="admin-map-offline-tip" class="offline-badge" style="display:none;">Simulated Radar</div>
+                    <div class="map-controls">
+                        <button id="btn-map-mode-toggle" class="map-btn" onclick="toggleMapMode()">Radar</button>
+                        <button class="map-btn" onclick="zoomMap(1.2)">+</button>
+                        <button class="map-btn" onclick="zoomMap(0.8)">−</button>
+                        <select id="admin-map-style-select" class="map-sel" onchange="changeAdminMapStyle()">
+                            <option value="google_roadmap">Google Maps</option>
+                            <option value="google_satellite">Google Vệ tinh</option>
+                            <option value="osm_light">OpenStreetMap</option>
+                            <option value="carto_dark">CartoDB Dark</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- TCU attack mini panel -->
+                <div class="panel" style="flex-shrink:0;">
+                    <div class="panel-head" style="margin-bottom:8px;">Thử nghiệm vị trí xe (kịch bản hộp đen TCU)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <!-- V1 mini -->
+                        <div class="atk-col v1" style="gap:6px;">
+                            <div class="col-head v1" style="font-size:10px;">Hệ thống cũ V1</div>
+                            <div style="display:flex;flex-direction:column;gap:5px;">
+                                <div class="sc-card v1">
+                                    <div class="sc-title v1" style="font-size:9.5px;margin-bottom:2px;">KB5 - VIPR Wipe</div>
+                                    <button class="btn-atk v1" onclick="runAttack('/api/v1/test/vipr-wipe',{vehicleId:2})">Xóa dữ liệu hộp đen</button>
+                                </div>
+                                <div class="sc-card v1">
+                                    <div class="sc-title v1" style="font-size:9.5px;margin-bottom:2px;">KB6 - Firmware Extract</div>
+                                    <button class="btn-atk v1" onclick="runAttack('/api/v1/test/firmware-dump')">Trích xuất khóa RSA</button>
+                                </div>
+                                <div class="sc-card v1">
+                                    <div class="sc-title v1" style="font-size:9.5px;margin-bottom:2px;">KB7 - Nghe lén GPS</div>
+                                    <div class="sc-row"><label>Xe #:</label><input class="sc-input v1" type="number" id="gps-input-v1-map" value="2" style="flex:1;margin:0;height:24px;font-size:10px;padding:3px 5px;"></div>
+                                    <button class="btn-atk v1" onclick="runAttack('/api/v1/test/gps-stream?vehicleId='+document.getElementById('gps-input-v1-map').value)">Bắt gói tin tọa độ</button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- V2 mini -->
+                        <div class="atk-col v2" style="gap:6px;">
+                            <div class="col-head v2" style="font-size:10px;">Hệ thống mới V2</div>
+                            <div style="display:flex;flex-direction:column;gap:5px;">
+                                <div class="sc-card v2">
+                                    <div class="sc-title v2" style="font-size:9.5px;margin-bottom:2px;">PH5 - HMAC + chống replay</div>
+                                    <button class="btn-atk v2" onclick="runDefend('/api/v2/test/vipr-wipe',{vehicleId:2})">Xác thực HMAC</button>
+                                </div>
+                                <div class="sc-card v2">
+                                    <div class="sc-title v2" style="font-size:9.5px;margin-bottom:2px;">PH6 - Firmware mã hóa</div>
+                                    <button class="btn-atk v2" onclick="runDefend('/api/v2/test/firmware-dump')">Ngăn chặn dịch ngược</button>
+                                </div>
+                                <div class="sc-card v2">
+                                    <div class="sc-title v2" style="font-size:9.5px;margin-bottom:2px;">PH7 - GPS AES-GCM</div>
+                                    <div class="sc-row"><label>Xe #:</label><input class="sc-input v2" type="number" id="gps-input-v2-map" value="2" style="flex:1;margin:0;height:24px;font-size:10px;padding:3px 5px;"></div>
+                                    <button class="btn-atk v2" onclick="runDefend('/api/v2/test/gps-stream?vehicleId='+document.getElementById('gps-input-v2-map').value)">Bảo vệ dữ liệu GPS</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Terminal fleet -->
+                <div class="panel" style="flex-shrink:0;background:#0f172a;border-color:#1e293b;">
+                    <div class="terminal-head"><span class="dot"></span>Terminal — Log hệ thống</div>
+                    <div class="terminal" id="console-out-fleet" style="height:90px;background:transparent;border:none;padding:0;">Sẵn sàng...</div>
+                </div>
+
+            </div><!-- /fleet-left -->
+
+            <!-- Right: Stats + Vehicle list + Alerts -->
+            <div class="fleet-right">
+
+                <!-- Stats -->
+                <div class="stat-grid">
+                    <div class="stat-card blue"><div class="stat-val" id="stat-active">0</div><div class="stat-lbl">Xe Active</div></div>
+                    <div class="stat-card green"><div class="stat-val" id="stat-safe">0</div><div class="stat-lbl">An Toàn</div></div>
+                    <div class="stat-card orange"><div class="stat-val" id="stat-tampered">0</div><div class="stat-lbl">Bị Nhiễu</div></div>
+                    <div class="stat-card red"><div class="stat-val" id="stat-locked">0</div><div class="stat-lbl">Bị Khóa</div></div>
+                </div>
+
+                <!-- Vehicle list -->
+                <div class="panel" style="flex:1;min-height:0;">
+                    <div class="panel-head">Trạng thái xe</div>
+                    <div id="fleet-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+                </div>
+
+                <!-- TCU Attack Event Feed -->
+                <div class="panel" style="flex-shrink:0;">
+                    <div class="panel-head" style="color:var(--red);margin-bottom:6px;">
+                        <span>Sự kiện Tấn công Hộp Đen</span>
+                        <div style="display:flex;align-items:center;gap:6px;">
+                            <span id="tcu-breach-count" style="font-size:9px;font-weight:700;color:var(--red);background:rgba(220,38,38,.1);padding:1px 8px;border-radius:20px;">0 vi phạm</span>
+                            <button class="btn-reset" onclick="resetTcuFeed()" style="font-size:8px;padding:1px 7px;">Xoá</button>
+                        </div>
+                    </div>
+                    <div id="tcu-event-feed" class="tcu-event-feed">
+                        <div style="font-size:9px;color:var(--muted);text-align:center;padding:6px;">Chưa có sự kiện nào...</div>
+                    </div>
+                </div>
+
+                <!-- Alerts -->
+                <div class="panel" style="height:130px;flex-shrink:0;">
+                    <div class="panel-head" style="color:var(--red);">Cảnh báo GPS/Tín hiệu</div>
+                    <div style="overflow-y:auto;flex:1;">
+                        <table id="tbl-fleet-alerts" style="font-size:10px;">
+                            <thead><tr><th>Loại</th><th>Xe</th><th>Nội dung</th><th>Thời gian</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div><!-- /fleet-right -->
+        </div>
+    </div><!-- /view-fleet -->
+
+    </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+// ==================== STATE ====================
+let adminMap = null;
+let adminMarkers = {};
+let adminActiveTileLayer = null;
+let sandboxMap = null;
+let sandboxMarkers = {};
+let sandboxTileLayer = null;
+let currentTab = 'sandbox';
+const baseUrl = '';
+
+// ==================== INITIALIZATION ====================
+window.onload = () => {
+    switchMainTab('sandbox');
+    fetchDb();
+    initSandboxMap();
+    setInterval(fetchDb, 5000);
+    setInterval(fetchFleet, 3000);
+    setInterval(updateSandboxMapMarkers, 3000);
+};
+
+// ==================== TABS ====================
+function switchMainTab(tabId) {
+    document.querySelectorAll('.view').forEach(el => { el.style.display = 'none'; el.classList.remove('active'); });
+    document.querySelectorAll('.sb-btn').forEach(el => el.classList.remove('active'));
+
+    const view = document.getElementById('view-' + tabId);
+    if (view) { view.style.display = 'flex'; view.classList.add('active'); }
+    const btn = document.getElementById('nav-tab-' + tabId);
+    if (btn) btn.classList.add('active');
+
+    currentTab = tabId;
+    if (tabId === 'fleet') {
+        // Need delay so flex layout fully renders before Leaflet measures div size
+        setTimeout(() => {
+            if (!adminMap) {
+                initMap();
+            } else {
+                adminMap.invalidateSize(true);
+            }
+            fetchFleet();
+        }, 150);
+    }
+}
+
+function switchScenarioTab(tabId) {
+    // Hide all scenario groups
+    document.querySelectorAll('.scenario-group').forEach(el => el.style.display = 'none');
+    // Show matching groups
+    const v1 = document.getElementById('v1-' + tabId);
+    const v2 = document.getElementById('v2-' + tabId);
+    if (v1) v1.style.display = 'flex';
+    if (v2) v2.style.display = 'flex';
+    // Update tab buttons
+    document.querySelectorAll('.stab').forEach(el => el.classList.remove('active'));
+    const tabBtn = document.getElementById('tab-' + tabId);
+    if (tabBtn) tabBtn.classList.add('active');
+}
+
+// ==================== SANDBOX MAP ====================
+function initSandboxMap() {
+    if (sandboxMap) return;
+    const el = document.getElementById('sandbox-map');
+    if (!el) return;
+    sandboxMap = L.map('sandbox-map', { zoomControl: false, attributionControl: false }).setView([21.028, 105.834], 11);
+    sandboxTileLayer = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20, subdomains: '0123'
+    }).addTo(sandboxMap);
+    // Add a small zoom control
+    L.control.zoom({ position: 'bottomright' }).addTo(sandboxMap);
+    updateSandboxMapMarkers();
+}
+
+async function updateSandboxMapMarkers() {
+    if (!sandboxMap) return;
+    try {
+        const gpsRes = await fetch('/api/v2/vehicles/gps-all').then(r => r.json());
+        const vehRes = await dbFetch('/api/db/vehicles').then(r => r.json());
+        gpsRes.forEach(v => {
+            if (v.lat === null || v.lon === null) return;
+            const pos = [v.lat, v.lon];
+            const color = v.isLocked ? '#dc2626' : (v.isTampered || v.isJammed ? '#ea580c' : '#16a34a');
+            const veh = vehRes.find(x => x.VehicleID == v.vehicleId) || {};
+            const html = `<div style="width:18px;height:18px;background:${color};border-radius:50%;color:white;text-align:center;font-size:9px;line-height:18px;font-weight:700;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,.4);">${v.vehicleId}</div>`;
+            const popup = `<b>Xe #${v.vehicleId}</b> ${veh.Model||''}<br><span style="font-size:10px;">&#9889; ${(v.speed||0).toFixed(1)} km/h</span>`;
+            if (!sandboxMarkers[v.vehicleId]) {
+                const icon = L.divIcon({ className: '', html, iconSize: [18,18], iconAnchor: [9,9] });
+                sandboxMarkers[v.vehicleId] = L.marker(pos, { icon }).addTo(sandboxMap).bindPopup(popup);
+            } else {
+                sandboxMarkers[v.vehicleId].setLatLng(pos).setPopupContent(popup);
+                const newIcon = L.divIcon({ className: '', html, iconSize: [18,18], iconAnchor: [9,9] });
+                sandboxMarkers[v.vehicleId].setIcon(newIcon);
+            }
+        });
+    } catch(e) {}
+}
+
+// ==================== ATTACK STATUS BANNER ====================
+let bannerTimer = null;
+function showBanner(type, text) {
+    const el = document.getElementById('atk-status-banner');
+    if (!el) return;
+    el.className = 'atk-banner ' + type;
+    el.innerHTML = text;
+    el.style.display = 'flex';
+    if (bannerTimer) clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(() => { el.style.display = 'none'; }, 5000);
+}
+// ==================== MAP LOGIC ====================
+function initMap() {
+    if (adminMap) return;
+    adminMap = L.map('gps-all-map').setView([21.028, 105.834], 12);
+    updateAdminTileLayer('google_roadmap');
+}
+
+function updateAdminTileLayer(style) {
+    if (!adminMap) return;
+    if (adminActiveTileLayer) adminMap.removeLayer(adminActiveTileLayer);
+    let url, opts;
+    if (style === 'google_satellite') {
+        url = 'https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}';
+        opts = { maxZoom: 20, subdomains: '0123', attribution: '&copy; Google Maps' };
+    } else if (style === 'carto_dark') {
+        url = 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+        opts = { maxZoom: 20, subdomains: 'abcd', attribution: '&copy; CARTO' };
+    } else if (style === 'osm_light') {
+        url = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+        opts = { maxZoom: 20, attribution: '&copy; OpenStreetMap' };
+    } else {
+        // Default: google_roadmap (same as client.html)
+        url = 'https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}';
+        opts = { maxZoom: 20, subdomains: '0123', attribution: '&copy; Google Maps' };
+    }
+    adminActiveTileLayer = L.tileLayer(url, opts).addTo(adminMap);
+}
+
+function zoomMap(factor) {
+    if (adminMap) adminMap.setZoom(adminMap.getZoom() + (factor > 1 ? 1 : -1));
+}
+
+let adminMapMode = 'map';
+function toggleMapMode() {
+    adminMapMode = adminMapMode === 'map' ? 'radar' : 'map';
+    document.getElementById('btn-map-mode-toggle').textContent = adminMapMode === 'map' ? 'Radar' : 'Bản đồ';
+    const wrapper = document.getElementById('admin-fallback-canvas-wrapper');
+    const mWrapper = document.getElementById('gps-all-map');
+    if (adminMapMode === 'radar') {
+        if (wrapper) wrapper.style.display = 'block';
+        if (mWrapper) mWrapper.style.display = 'none';
+    } else {
+        if (wrapper) wrapper.style.display = 'none';
+        if (mWrapper) mWrapper.style.display = 'block';
+        if (adminMap) adminMap.invalidateSize();
+    }
+}
+
+function changeAdminMapStyle() {
+    updateAdminTileLayer(document.getElementById('admin-map-style-select').value);
+}
+
+const ADMIN_KEY = 'demo-admin-2026';
+async function dbFetch(path) {
+    return fetch(path, {
+        headers: { 'x-admin-key': ADMIN_KEY },
+        credentials: 'include'
+    });
+}
+
+// ==================== DB DATA FETCH ====================
+async function fetchDb() {
+    const fetchTableData = async (path) => {
+        try {
+            const res = await dbFetch(path);
+            if (!res.ok) {
+                console.warn(`Fetch ${path} failed: status ${res.status}`);
+                return null;
+            }
+            const data = await res.json();
+            return Array.isArray(data) ? data : null;
+        } catch (e) {
+            console.error(`Error fetching ${path}:`, e);
+            return null;
+        }
+    };
+
+    const accRes = await fetchTableData('/api/db/accounts');
+    const vehRes = await fetchTableData('/api/db/vehicles');
+    const docRes = await fetchTableData('/api/db/documents');
+    const rentRes = await fetchTableData('/api/db/rentals');
+    const infoRes = await fetchTableData('/api/db/infotainment');
+    const logRes = await fetchTableData('/api/db/logs');
+
+    try {
+        renderTable('tbl-accounts', accRes, d => {
+            if (!d) return '<tr><td colspan="5">—</td></tr>';
+            const hashStr = (d.PasswordHash && typeof d.PasswordHash === 'string') ? d.PasswordHash.substring(0,18) + '…' : '—';
+            return `<tr><td>${d.AccountID || '—'}</td><td>${d.Username || '—'}</td><td>${d.PasswordPlain || '—'}</td><td style="font-family:monospace">${hashStr}</td><td>${d.Role || '—'}</td></tr>`;
+        });
+    } catch (e) { console.error(e); }
+
+    try {
+        renderTable('tbl-vehicles', vehRes, d => {
+            if (!d) return '<tr><td colspan="4">—</td></tr>';
+            const statusColor = d.Status === 'Rented' ? 'var(--red)' : 'var(--green)';
+            return `<tr><td>${d.VehicleID || '—'}</td><td>${d.LicensePlate || '—'}</td><td>${d.Model || '—'}</td><td><span style="color:${statusColor}">${d.Status || '—'}</span></td></tr>`;
+        });
+    } catch (e) { console.error(e); }
+
+    try {
+        renderTable('tbl-documents', docRes, d => {
+            if (!d) return '<tr><td colspan="4">—</td></tr>';
+            const licData = (d.LicenseData && typeof d.LicenseData === 'string') ? d.LicenseData.substring(0,22)+'…' : '—';
+            return `<tr><td>${d.DocID || '—'}</td><td>${d.AccountID || '—'}</td><td style="font-family:monospace">${licData}</td><td>${d.IsEncrypted ? '[KHÓA] YES' : '[CẢNH BÁO] NO'}</td></tr>`;
+        });
+    } catch (e) { console.error(e); }
+
+    try {
+        const duyetBtn = (id) => `<button onclick="confirmRental(${id})" style="font-size:9px;padding:2px 5px;border-radius:3px;border:1px solid var(--green);color:var(--green);cursor:pointer;background:transparent;">Duyệt</button>`;
+        renderTable('tbl-rentals', rentRes, d => {
+            if (!d) return '<tr><td colspan="5">—</td></tr>';
+            return `<tr><td>${d.RentalID || '—'}</td><td>${d.VehicleID || '—'}</td><td>${d.AccountID || '—'}</td><td>${d.Status || '—'}</td><td>${d.Status==='Pending' ? duyetBtn(d.RentalID) : ''}</td></tr>`;
+        });
+    } catch (e) { console.error(e); }
+
+    try {
+        renderTable('tbl-infotainment', infoRes, d => {
+            if (!d) return '<tr><td colspan="4">—</td></tr>';
+            return `<tr><td>${d.VehicleID || '—'}</td><td>${d.SyncedContacts?'Yes':'No'}</td><td>${d.GPSHistory?'Yes':'No'}</td><td>${d.ActiveBluetoothDevice||'—'}</td></tr>`;
+        });
+    } catch (e) { console.error(e); }
+
+    try {
+        renderTable('tbl-logs', logRes, d => {
+            if (!d) return '<tr><td colspan="3">—</td></tr>';
+            const desc = d.Description || '—';
+            const ts = d.Timestamp || '—';
+            return `<tr><td>${d.LogID || '—'}</td><td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${desc}</td><td style="white-space:nowrap">${ts}</td></tr>`;
+        });
+    } catch (e) { console.error(e); }
+}
+
+function renderTable(id, data, rowRenderer) {
+    const tbody = document.querySelector(`#${id} tbody`);
+    if (!tbody) return;
+    if (!Array.isArray(data)) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:10px;color:var(--red);">Lỗi tải dữ liệu hoặc không có quyền truy cập</td></tr>';
+        return;
+    }
+    if (data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;padding:10px;color:var(--muted);">Không có dữ liệu</td></tr>';
+        return;
+    }
+    tbody.innerHTML = data.map(rowRenderer).join('');
+}
+
+async function confirmRental(id) {
+    await fetch('/api/v2/rentals/confirm', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rentalId: id }) });
+    fetchDb();
+}
+
+// ==================== FLEET FETCH & MAP ====================
+async function fetchFleet() {
+    if (currentTab !== 'fleet') return;
+    try {
+        const [gpsRes, alertsRes, vehRes, infoRes] = await Promise.all([
+            fetch('/api/v2/vehicles/gps-all').then(r => r.json()),
+            dbFetch('/api/db/alerts').then(r => r.json()),
+            dbFetch('/api/db/vehicles').then(r => r.json()),
+            dbFetch('/api/db/infotainment').then(r => r.json())
+        ]);
+
+        let active = 0, safe = 0, tamp = 0, locked = 0;
+        const fleetList = document.getElementById('fleet-list');
+        fleetList.innerHTML = '';
+
+        // Update map markers with popup
+        gpsRes.forEach(v => {
+            active++;
+            if (v.isLocked) locked++;
+            else if (v.isTampered || v.isJammed) tamp++;
+            else safe++;
+
+            if (v.lat !== null && v.lon !== null && adminMap) {
+                const pos = [v.lat, v.lon];
+                const color = v.isLocked ? '#dc2626' : (v.isTampered || v.isJammed ? '#ea580c' : '#16a34a');
+                const veh = vehRes.find(x => x.VehicleID == v.vehicleId) || {};
+                const info = infoRes.find(x => x.VehicleID == v.vehicleId) || {};
+                const bt = info.ActiveBluetoothDevice || info.BluetoothDeviceName || 'Chưa kết nối';
+                const statusText = v.isLocked ? '[KHÓA] Đã khóa' : (v.isTampered ? '[CẢNH BÁO] Bị nhiễu' : '[BÌNH THƯỜNG] Bình thường');
+                const popupHtml = `
+                    <div style="font-family:Outfit,sans-serif;min-width:160px;">
+                        <b style="font-size:12px;">[XE] Xe #${v.vehicleId}</b><br>
+                        <span style="font-size:10px;color:#64748b;">${veh.Model || ''} | ${veh.LicensePlate || ''}</span><hr style="margin:4px 0;border:none;border-top:1px solid #e2e8f0;">
+                        <div style="font-size:10.5px;line-height:1.7;">
+                            ${statusText}<br>
+                            [TỐC ĐỘ] <b>${(v.speed||0).toFixed(1)} km/h</b><br>
+                            [THIẾT BỊ] ${bt}<br>
+                            [VỊ TRÍ] ${v.lat.toFixed(4)}, ${v.lon.toFixed(4)}
+                        </div>
+                    </div>`;
+
+                if (!adminMarkers[v.vehicleId]) {
+                    const icon = L.divIcon({
+                        className: '',
+                        html: `<div style="width:24px;height:24px;background:${color};border-radius:50%;color:white;text-align:center;font-size:10px;line-height:24px;font-weight:700;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,.35);cursor:pointer;">${v.vehicleId}</div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
+                    adminMarkers[v.vehicleId] = L.marker(pos, { icon }).addTo(adminMap).bindPopup(popupHtml);
+                } else {
+                    adminMarkers[v.vehicleId].setLatLng(pos);
+                    adminMarkers[v.vehicleId].setPopupContent(popupHtml);
+                    // Update icon color if status changed
+                    const newIcon = L.divIcon({
+                        className: '',
+                        html: `<div style="width:24px;height:24px;background:${color};border-radius:50%;color:white;text-align:center;font-size:10px;line-height:24px;font-weight:700;border:2px solid white;box-shadow:0 2px 5px rgba(0,0,0,.35);cursor:pointer;">${v.vehicleId}</div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    });
+                    adminMarkers[v.vehicleId].setIcon(newIcon);
+                }
+            }
+        });
+
+        // Render all vehicles in list (all 10, including offline ones)
+        vehRes.forEach(veh => {
+            const v = gpsRes.find(x => x.vehicleId == veh.VehicleID);
+            const info = infoRes.find(x => x.VehicleID == veh.VehicleID) || {};
+            const speed = v ? +(v.speed || 0).toFixed(1) : 0;
+            const rentalTag = veh.Status === 'Rented' ? '<span style="color:var(--red);font-weight:700;">Đang thuê</span>' : '<span style="color:var(--green);">Rảnh</span>';
+            const bluetooth = info.ActiveBluetoothDevice || info.BluetoothDeviceName || '—';
+            const locText = v ? `${v.lat?.toFixed(4)}, ${v.lon?.toFixed(4)}` : 'Đang đỗ';
+            const isCompromised = compromisedVehicles[veh.VehicleID] && (Date.now() - compromisedVehicles[veh.VehicleID] < 30000);
+            const statusClass = isCompromised ? 'compromised' : (!v ? 'offline' : (v.isLocked ? 'locked' : ''));
+            const badgeClass = isCompromised ? 'compromised' : (!v ? 'offline' : (v.isLocked ? 'locked' : 'active'));
+            const badgeText = isCompromised ? 'COMPROMISED' : (!v ? 'Offline' : (v.isLocked ? 'Khóa' : 'Active'));
+            const compromisedBanner = isCompromised ? '<div style="font-size:8.5px;font-weight:800;color:var(--red);background:rgba(220,38,38,.1);padding:2px 5px;border-radius:3px;margin-bottom:3px;letter-spacing:.3px;">Dữ liệu hộp đen bị xâm phạm</div>' : '';
+
+            fleetList.innerHTML += `
+                <div class="v-card ${statusClass}">
+                    <div class="v-card-top">
+                        <span class="v-card-id">Xe #${veh.VehicleID} <span style="font-size:9.5px;font-weight:400;color:var(--muted);">${veh.Model||''}</span></span>
+                        <span class="v-badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                    ${compromisedBanner}
+                    <div class="v-info">
+                        ${rentalTag} &nbsp; ${speed} km/h<br>
+                        <span style="font-size:10px;">${bluetooth}</span><br>
+                        <span style="font-family:monospace;font-size:9.5px;">${locText}</span>
+                    </div>
+                    <button class="v-wipe" onclick="runAttack('/api/v1/test/vipr-wipe',{vehicleId:${veh.VehicleID}})">Gửi WIPE</button>
+                </div>`;
+        });
+
+        document.getElementById('stat-active').textContent = active;
+        document.getElementById('stat-safe').textContent = safe;
+        document.getElementById('stat-tampered').textContent = tamp;
+        document.getElementById('stat-locked').textContent = locked;
+
+        renderTable('tbl-fleet-alerts', alertsRes.slice(0, 20), a => `<tr><td><span style="font-size:9px;padding:1px 4px;background:rgba(220,38,38,.1);color:var(--red);border-radius:3px;font-weight:700;">${a.Type||a.AlertType||''}</span></td><td>#${a.VehicleID}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.Message||a.Description||''}</td><td style="white-space:nowrap;font-size:9px;">${(a.Timestamp||'').substring(11,19)}</td></tr>`);
+
+    } catch (e) { console.error('Fleet error:', e); }
+}
+
+// ==================== ATTACK / DEFEND ====================
+async function runAttack(url, payload = {}, method = null) {
+    if (!method) method = (url.includes('firmware-dump') || url.includes('gps-stream') || url.includes('/rental/')) ? 'GET' : 'POST';
+    logConsole('ATK', url, method === 'GET' ? null : payload);
+    try {
+        const opts = { method };
+        if (method === 'POST') { opts.headers = { 'Content-Type': 'application/json' }; opts.body = JSON.stringify(payload); }
+        const res = await fetch(url, opts);
+        const data = await res.text();
+        const success = res.status >= 200 && res.status < 300;
+        logConsole('RES_ATK', url, res.status, data, success);
+        if (success) {
+            showBanner('breach', ' XÂM NHẬP THÀNH CÔNG — HỆ THỐNG BỊ TẤN CÔNG!');
+            updateScores('breach');
+            // TCU-specific event cards
+            if (url.includes('vipr-wipe')) {
+                const vid = payload.vehicleId || '?';
+                addTcuEvent('breach', 'VIPR WIPE', vid, 'Toàn bộ GPS log, sự kiện CAN bị xóa sạch');
+            } else if (url.includes('firmware-dump')) {
+                addTcuEvent('breach', 'FIRMWARE DUMP', null, 'Private Key RSA đã bị trích xuất từ Flash Memory');
+            } else if (url.includes('gps-stream')) {
+                const vid = new URLSearchParams(url.split('?')[1]).get('vehicleId') || '?';
+                addTcuEvent('breach', 'GPS INTERCEPT', vid, 'Tọa độ vị trí xe truyền Plaintext — bị nghe lén');
+            }
+        }
+        // Auto-sync
+        setTimeout(() => { fetchDb(); if (currentTab === 'fleet') fetchFleet(); updateSandboxMapMarkers(); }, 400);
+    } catch (e) { logConsole('ERR', url, e.message); }
+}
+
+function isDefendProtected(url, status, rawData) {
+    if (status >= 400) return true;
+    if (url.includes('gps-stream') && status >= 200 && status < 300) {
+        try {
+            const parsed = JSON.parse(rawData);
+            return !!(parsed.security?.encrypted_gps_payload || String(parsed.encryption || '').includes('AES'));
+        } catch { return false; }
+    }
+    return false;
+}
+
+async function runDefend(url, payload = {}, method = null) {
+    if (!method) method = (url.includes('firmware-dump') || url.includes('gps-stream') || url.includes('/rental/')) ? 'GET' : 'POST';
+    logConsole('DEF', url, method === 'GET' ? null : payload);
+    try {
+        const opts = { method };
+        if (method === 'POST') { opts.headers = { 'Content-Type': 'application/json' }; opts.body = JSON.stringify(payload); }
+        const res = await fetch(url, opts);
+        const data = await res.text();
+        const protectedResult = isDefendProtected(url, res.status, data);
+        logConsole('RES_DEF', url, res.status, data, protectedResult);
+        if (protectedResult) {
+            showBanner('blocked', '[BẢO VỆ] TẤN CÔNG BỊ CHẶN — HỆ THỐNG V2 AN TOÀN!');
+            updateScores('blocked');
+            // TCU-specific blocked event
+            if (url.includes('vipr-wipe')) {
+                const vid = payload.vehicleId || '?';
+                addTcuEvent('blocked', 'VIPR WIPE', vid, 'Lệnh WIPE bị từ chối — thiếu chữ ký HMAC hợp lệ');
+            } else if (url.includes('firmware-dump')) {
+                addTcuEvent('blocked', 'FIRMWARE DUMP', null, 'Firmware đã mã hóa AES-256 — không thể giải mã');
+            } else if (url.includes('gps-stream')) {
+                const vid = new URLSearchParams(url.split('?')[1]).get('vehicleId') || '?';
+                addTcuEvent('blocked', 'GPS INTERCEPT', vid, 'Dữ liệu GPS đã mã hóa AES-GCM — chỉ thấy cipher');
+            }
+        }
+        // Auto-sync
+        setTimeout(() => { fetchDb(); if (currentTab === 'fleet') fetchFleet(); }, 400);
+    } catch (e) { logConsole('ERR', url, e.message); }
+}
+
+// ==================== TCU BREACH TRACKING ====================
+let tcuBreachCount = 0;
+const compromisedVehicles = {};
+
+function addTcuEvent(type, attackName, vehicleId, detail) {
+    const feed = document.getElementById('tcu-event-feed');
+    if (!feed) return;
+    // Clear placeholder
+    const placeholder = feed.querySelector('div[style]');
+    if (placeholder) placeholder.remove();
+
+    const time = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const isBreach = type === 'breach';
+
+    if (isBreach) {
+        tcuBreachCount++;
+        const counter = document.getElementById('tcu-breach-count');
+        if (counter) counter.textContent = tcuBreachCount + ' vi phạm';
+        if (vehicleId) compromisedVehicles[vehicleId] = Date.now();
+    }
+
+    const vehicleTag = vehicleId ? `<span style="font-weight:700;color:${isBreach ? 'var(--red)' : 'var(--green)'};">Xe #${vehicleId}</span> — ` : '';
+    const icon = isBreach ? '■ XÂM PHẠM' : '■ BỊ CHẶN';
+    const detailHtml = detail ? `<div class="tcu-event-detail">${detail}</div>` : '';
+
+    const el = document.createElement('div');
+    el.className = `tcu-event ${type}`;
+    el.innerHTML = `
+        <div class="tcu-event-header">
+            <span class="tcu-event-type">${icon} — ${attackName}</span>
+            <span class="tcu-event-time">${time}</span>
+        </div>
+        <div class="tcu-event-body">${vehicleTag}${isBreach ? 'Dữ liệu hộp đen bị xâm phạm' : 'Khối lượng tấn công bị chặn bởi hệ thống bảo mật'}</div>
+        ${detailHtml}
+    `;
+    // Prepend (newest on top)
+    feed.insertBefore(el, feed.firstChild);
+    // Flash the vehicle marker on map
+    if (isBreach && vehicleId && adminMarkers[vehicleId]) {
+        flashMarker(vehicleId);
+    }
+}
+
+function flashMarker(vehicleId) {
+    const marker = adminMarkers[vehicleId];
+    if (!marker) return;
+    let count = 0;
+    const orig = marker.getElement();
+    const flash = setInterval(() => {
+        if (!orig) { clearInterval(flash); return; }
+        const inner = orig.querySelector('div');
+        if (!inner) { clearInterval(flash); return; }
+        inner.style.background = (count % 2 === 0) ? '#ff0000' : '#7f1d1d';
+        inner.style.boxShadow = (count % 2 === 0) ? '0 0 12px 4px rgba(255,0,0,0.7)' : '0 2px 5px rgba(0,0,0,.35)';
+        inner.style.transform = (count % 2 === 0) ? 'scale(1.4)' : 'scale(1)';
+        count++;
+        if (count >= 8) {
+            clearInterval(flash);
+            inner.style.background = '#dc2626';
+            inner.style.boxShadow = '0 0 8px 2px rgba(220,38,38,0.5)';
+            inner.style.transform = 'scale(1)';
+        }
+    }, 200);
+    // Open popup if map is visible
+    if (adminMap) marker.openPopup();
+}
+
+let cntBreach = 0, cntBlocked = 0;
+function updateScores(type) {
+    if (type === 'breach') { cntBreach++; document.getElementById('cnt-breach').textContent = cntBreach; }
+    if (type === 'blocked') { cntBlocked++; document.getElementById('cnt-blocked').textContent = cntBlocked; }
+}
+
+// ==================== RESET ====================
+function resetTcuFeed() {
+    tcuBreachCount = 0;
+    const counter = document.getElementById('tcu-breach-count');
+    if (counter) counter.textContent = '0 vi phạm';
+    const feed = document.getElementById('tcu-event-feed');
+    if (feed) feed.innerHTML = '<div style="font-size:9px;color:var(--muted);text-align:center;padding:6px;">Chưa có sự kiện nào...</div>';
+}
+
+async function resetAll() {
+    try { await fetch('/api/test/restore', {method: 'POST'}); } catch(e) {}
+    // Reset scores
+    cntBreach = 0; cntBlocked = 0;
+    const b = document.getElementById('cnt-breach'); if (b) b.textContent = '0';
+    const bl = document.getElementById('cnt-blocked'); if (bl) bl.textContent = '0';
+    // Reset TCU feed
+    resetTcuFeed();
+    // Clear compromised vehicles
+    Object.keys(compromisedVehicles).forEach(k => delete compromisedVehicles[k]);
+    // Clear terminals
+    const co = document.getElementById('console-out');
+    if (co) co.innerHTML = '<span style="color:#334155;">Reset — Waiting for action...</span>';
+    const cf = document.getElementById('console-out-fleet');
+    if (cf) cf.innerHTML = '';
+    // Hide banner
+    const banner = document.getElementById('atk-status-banner');
+    if (banner) { banner.style.display = 'none'; banner.className = 'atk-banner'; }
+    // Re-fetch to clear compromised state from vehicle cards
+    fetchDb();
+    if (currentTab === 'fleet') fetchFleet();
+}
+
+// ==================== TERMINAL LOG (SOC-style) ====================
+function logConsole(type, url, payloadOrStatus, rawData, isResult) {
+    const els = [document.getElementById('console-out'), document.getElementById('console-out-fleet')];
+    const time = new Date().toISOString().split('T')[1].split('.')[0];
+    // Shorten the endpoint for display
+    const endpoint = url.replace(/^https?:\/\/[^/]+/, '').replace('/api/v1/test/', '[V1] ').replace('/api/v2/test/', '[V2] ');
+
+    let line = '';
+
+    if (type === 'ATK') {
+        // ═══ Separator line ═══
+        line = `<span style="color:#1e3a5f;">${'─'.repeat(52)}</span>\n`;
+        line += `<span style="color:#ef4444;font-weight:700;">${time} ▶ ATTACK</span>  <span style="color:#94a3b8;">${endpoint}</span>`;
+        if (payloadOrStatus && Object.keys(payloadOrStatus).length > 0) {
+            const pStr = Object.entries(payloadOrStatus).map(([k,v])=>`${k}=${JSON.stringify(v)}`).join(' ');
+            line += `\n<span style="color:#475569;">         Payload : <span style="color:#fbbf24;">${pStr.substring(0,120)}</span></span>`;
+        }
+    } else if (type === 'DEF') {
+        line = `<span style="color:#1e3a5f;">${'─'.repeat(52)}</span>\n`;
+        line += `<span style="color:#60a5fa;font-weight:700;">${time} ▶ DEFEND</span>   <span style="color:#94a3b8;">${endpoint}</span>`;
+        if (payloadOrStatus && Object.keys(payloadOrStatus).length > 0) {
+            const pStr = Object.entries(payloadOrStatus).map(([k,v])=>`${k}=${JSON.stringify(v)}`).join(' ');
+            line += `\n<span style="color:#475569;">         Payload : <span style="color:#93c5fd;">${pStr.substring(0,120)}</span></span>`;
+        }
+    } else if (type === 'RES_ATK') {
+        const sc = payloadOrStatus;
+        const breached = sc >= 200 && sc < 300;
+        if (breached) {
+            line = `<span style="color:#ef4444;font-weight:700;">         Status  : </span><span style="background:#7f1d1d;color:#fca5a5;padding:0 4px;border-radius:2px;"> ${sc} BREACH </span>`;
+        } else {
+            line = `<span style="color:#64748b;">         Status  : </span><span style="color:#64748b;">${sc}</span>`;
+        }
+        if (rawData) {
+            try {
+                const p = JSON.parse(rawData);
+                const msg = p.message || p.error || p.success || p.note || JSON.stringify(p).substring(0,160);
+                if (breached) {
+                    line += `\n<span style="color:#ef4444;">         Result  : </span><span style="color:#fca5a5;">${String(msg).substring(0,160)}</span>`;
+                } else {
+                    line += `\n<span style="color:#475569;">         Result  : ${String(msg).substring(0,160)}</span>`;
+                }
+            } catch { line += `\n<span style="color:#475569;">         Result  : ${String(rawData).substring(0,160)}</span>`; }
+        }
+    } else if (type === 'RES_DEF') {
+        const sc = payloadOrStatus;
+        const protectedResult = isResult === true;
+        if (protectedResult) {
+            const label = sc >= 400 ? 'BLOCKED' : 'PROTECTED';
+            line = `<span style="color:#4ade80;font-weight:700;">         Status  : </span><span style="background:#14532d;color:#86efac;padding:0 4px;border-radius:2px;"> ${sc} ${label} </span>`;
+        } else {
+            line = `<span style="color:#64748b;">         Status  : </span><span style="color:#fbbf24;">${sc} PASS</span>`;
+        }
+        if (rawData) {
+            try {
+                const p = JSON.parse(rawData);
+                const msg = p.message || p.error || p.success || p.note || JSON.stringify(p).substring(0,160);
+                if (protectedResult) {
+                    line += `\n<span style="color:#4ade80;">         Result  : </span><span style="color:#86efac;">${String(msg).substring(0,160)}</span>`;
+                } else {
+                    line += `\n<span style="color:#475569;">         Result  : ${String(msg).substring(0,160)}</span>`;
+                }
+            } catch { line += `\n<span style="color:#475569;">         Result  : ${String(rawData).substring(0,160)}</span>`; }
+        }
+    } else if (type === 'ERR') {
+        line = `<span style="color:#fb923c;">${time} ERROR   : ${url} — ${payloadOrStatus}</span>`;
+    }
+
+    els.forEach(el => {
+        if (!el) return;
+        el.innerHTML += line + '\n';
+        el.scrollTop = el.scrollHeight;
+    });
+}
+
+</script>
+</body>
+</html>

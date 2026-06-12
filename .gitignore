@@ -1,0 +1,23 @@
+node_modules/
+.env
+*.db
+*.sqlite
+*.pem
+uploads/
+scratch/
+.vs/
+
+# Generated attack/demo artifacts
+dump_firmware_extracted_keys.txt
+public/test.html
+
+# Temporary scripts
+check*.js
+patch*.js
+temp*.js
+cleanup.js
+fix_map.js
+payload.js
+unmerge.js
+test_db.js
+extract.ps1
