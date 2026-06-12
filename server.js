@@ -1,4 +1,4 @@
-require('dotenv').config();
+﻿require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
@@ -2121,7 +2121,7 @@ function startGpsLoop(vehicleId) {
             if (!st || st.isTampered) return;
 
             const btDevice = infoRow?.ActiveBluetoothDevice || '';
-            const isBtOffline = !btDevice || /offline|ngắt|ngat|không|khong|chưa|chua/i.test(btDevice) || !/kết nối|connect/i.test(btDevice);
+            const isBtOffline = !btDevice || /offline|ngắt|ngat/i.test(btDevice) || !/kết nối|connect/i.test(btDevice);
 
             if (st.isLocked || isBtOffline) {
                 st.speed = 0;
@@ -2564,9 +2564,9 @@ app.post('/api/v2/vehicles/lock-engine', verifyTokenV2, (req, res) => {
         db.run(`UPDATE Vehicles SET Status = 'Locked' WHERE VehicleID = ?`, [vehicleId]);
         db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
             [vehicleId, req.user.AccountID, 'ENGINE_LOCK',
-             `Động cơ xe #${vehicleId} bị kh�a từ xa bởi ${req.user.Username}. Timestamp: ${timestamp}. Chống Replay: ✅`, 'MEDIUM']);
+             `Động cơ xe #${vehicleId} bị khóa từ xa bởi ${req.user.Username}. Timestamp: ${timestamp}. Chống Replay: ✅`, 'MEDIUM']);
 
-        res.json({ message: `Xe #${vehicleId} đ� bị kh�a động cơ từ xa th�nh c�ng! Vận tốc đưa về 0.`, lockedAt: now, lockedBy: req.user.Username });
+        res.json({ message: `Xe #${vehicleId} đã bị khóa động cơ từ xa thành công! Vận tốc đưa về 0.`, lockedAt: now, lockedBy: req.user.Username });
     }
 });
 
