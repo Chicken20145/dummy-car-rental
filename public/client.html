@@ -1929,11 +1929,15 @@ function startGpsSSE() {
         try { const data=JSON.parse(e.data); handleGpsData(data); } catch{}
     };
     
-    // Bắt sự kiện báo cáo định kỳ 10 phút / thông báo thay đổi tuyến đường
+    // Bắt sự kiện báo cáo định kỳ 10 phút / thông báo thay đổi tuyến đường (chỉ hiển thị cho chủ xe)
     gpsSSE.addEventListener('report', (e) => {
         try {
             const reportData = JSON.parse(e.data);
-            showToast('Thông Báo Khách Hàng', reportData.message, 'info', 10000); // Hiện lâu hơn chút
+            const isOwned = myOwnedVehicle && myOwnedVehicle.VehicleID === activeTrackingVehicle?.VehicleID;
+            if (isOwned) {
+                const toastTitle = 'Thông Báo Chủ Xe (Báo Cáo 1 Giờ)';
+                showToast(toastTitle, reportData.message, 'info', 10000); // Hiện lâu hơn chút
+            }
         } catch(err) { console.error('Lỗi khi đọc report SSE', err); }
     });
 

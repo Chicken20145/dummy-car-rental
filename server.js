@@ -1,4 +1,4 @@
-﻿require('dotenv').config();
+require('dotenv').config();
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const multer = require('multer');
@@ -144,12 +144,12 @@ if (fs.existsSync(publicKeyPath) && fs.existsSync(privateKeyPath)) {
 // =========================================================
 // PHẦN 1: KHỞI TẠO CƠ SỞ DỮ LIỆU SQLITE
 // =========================================================
-// X�a file r�c temp.db khi khởi động
+// Xóa file rác temp.db khi khởi động
 const tempDbFile = path.join(__dirname, 'temp.db');
 if (fs.existsSync(tempDbFile)) {
     try {
         fs.unlinkSync(tempDbFile);
-        console.log('[DB] Đ� dọn dẹp file r�c temp.db.');
+        console.log('[DB] Đã dọn dẹp file rác temp.db.');
     } catch (e) {
         console.error('[DB] Lỗi khi dọn dẹp temp.db:', e.message);
     }
@@ -157,7 +157,7 @@ if (fs.existsSync(tempDbFile)) {
 
 const db = new sqlite3.Database('./database.db', (err) => {
     if (err) console.error(err.message);
-    console.log('Đ� kết nối với CSDL SQLite.');
+    console.log('Đã kết nối với CSDL SQLite.');
     db.run("PRAGMA busy_timeout = 10000"); // SQLite busy timeout to avoid write conflicts
 });
 db.on('error', (err) => console.error('GLOBAL DB ERROR:', err));
@@ -311,7 +311,7 @@ const resetDatabase = () => {
                 console.error("Lỗi khi resetDatabase:", err);
                 reject(err);
             } else {
-                console.log("Đ� resetDatabase bằng db.exec.");
+                console.log("Đã resetDatabase bằng db.exec.");
                 wipedBluetoothVehicles.clear();
                 resolve();
             }
@@ -334,7 +334,7 @@ db.get(`SELECT count(*) as count FROM sqlite_master WHERE type='table' AND name=
 const verifyAdminKey = (req, res, next) => {
     const key = req.headers['x-admin-key'];
     if (key !== 'demo-admin-2026') {
-        return res.status(403).json({ error: 'Forbidden: Y�u cầu m� quản trị hợp lệ.' });
+        return res.status(403).json({ error: 'Forbidden: Yêu cầu mã quản trị hợp lệ.' });
     }
     next();
 };
@@ -1068,7 +1068,7 @@ app.post('/api/v2/reviews', verifyTokenV2, (req, res) => {
             db.run(`INSERT INTO Reviews (AccountID, VehicleID, RentalID, Rating, Comment) VALUES (?,?,?,?,?)`,
                 [req.user.AccountID, vehicleId, rental.RentalID, rating, comment || ''], (err2) => {
                 if (err2) return res.status(500).json({ error: err2.message });
-                res.json({ message: 'Da gui danh gia thanh cong! Cam on ban.' });
+                res.json({ message: 'Da gui danh gia thành công! Cam on ban.' });
             });
         });
     });
@@ -1112,7 +1112,7 @@ app.put('/api/v2/profile', verifyTokenV2, (req, res) => {
     db.run(`UPDATE Accounts SET FullName=?, Phone=?, Email=? WHERE AccountID=?`,
         [fullName || '', phone || '', email || '', req.user.AccountID], (err) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ message: 'Cap nhat ho so thanh cong!' });
+        res.json({ message: 'Cap nhat ho so thành công!' });
     });
 });
 
@@ -1167,7 +1167,7 @@ app.post('/api/v2/rentals/rent-dated', verifyTokenV2, (req, res) => {
                         db.get(`SELECT DeviceModel FROM Accounts WHERE AccountID = ?`, [req.user.AccountID], (err, userRow) => {
                             const deviceModel = userRow?.DeviceModel || 'Thiết bị không xác định';
                             db.run(`INSERT OR REPLACE INTO VehicleInfotainment (VehicleID, SyncedContacts, GPSHistory, ActiveBluetoothDevice) VALUES (?,?,?,?)`,
-                                [vehicleId, encryptAES(cPlain), encryptAES(gPlain), deviceModel], (err5) => {
+                                [vehicleId, encryptAES(cPlain), encryptAES(gPlain), deviceModel + ' (Đang kết nối)'], (err5) => {
                                 
                                 initGpsSession(vehicleId, req.user.AccountID, routeType || 'hanoi');
                                 
@@ -1262,7 +1262,7 @@ app.post('/api/v2/vehicles/rent-dated', verifyTokenV2, (req, res) => {
                         db.get(`SELECT DeviceModel FROM Accounts WHERE AccountID = ?`, [req.user.AccountID], (err4, userRow) => {
                             const deviceModel = userRow?.DeviceModel || 'Thiet bi khach hang';
                             db.run(`INSERT OR REPLACE INTO VehicleInfotainment (VehicleID, SyncedContacts, GPSHistory, ActiveBluetoothDevice) VALUES (?,?,?,?)`,
-                                [vehicleId, encryptAES(cPlain), encryptAES(gPlain), deviceModel]);
+                                [vehicleId, encryptAES(cPlain), encryptAES(gPlain), deviceModel + ' (Đang kết nối)']);
                             initGpsSession(vehicleId, req.user.AccountID, routeType);
                             res.json({ message: `Đặt xe thành công!`, rentalId, vehicleId, totalAmount, days });
                         });
@@ -1282,9 +1282,8 @@ app.post('/api/v2/vehicles/return', verifyTokenV2, (req, res) => {
         db.run(`UPDATE Rentals SET Status = 'Completed' WHERE RentalID = ?`, [rentalId], (err2) => {
             if (err2) return res.status(500).json({ error: err2.message });
             db.run(`UPDATE Vehicles SET Status = 'Available' WHERE VehicleID = ?`, [rental.VehicleID]);
-            // Dừng GPS session
-            const st = gpsState[rental.VehicleID];
-            if (st && st.intervalId) { clearInterval(st.intervalId); delete gpsState[rental.VehicleID]; }
+            // Dừng GPS session và cập nhật trạng thái hộp đen
+            terminateGpsSession(rental.VehicleID);
             res.json({ message: 'Trả xe thành công! Cảm ơn bạn đã sử dụng VNCars.' });
         });
     });
@@ -1314,13 +1313,13 @@ app.post('/api/v2/rentals/confirm', verifyTokenAndAdminV2, (req, res) => {
                     const gPlain = `GPS Log: Nha (103.${Math.floor(10+Math.random()*90)}, 21.${Math.floor(10+Math.random()*90)})`;
                     
                     db.run(`INSERT OR REPLACE INTO VehicleInfotainment (VehicleID, SyncedContacts, GPSHistory, ActiveBluetoothDevice) VALUES (?,?,?,?)`,
-                        [vehicleId, encryptAES(cPlain), encryptAES(gPlain), `Thiet bi cua ${username}`], (err5) => {
+                        [vehicleId, encryptAES(cPlain), encryptAES(gPlain), `Thiet bi cua ${username} (Đang kết nối)`], (err5) => {
                         
-                        const requestedRoute = pendingRoutes[vehicleId] || 'hanoi';
+                        const requestedRoute = rental.RouteType || pendingRoutes[vehicleId] || 'hanoi';
                         initGpsSession(vehicleId, accountId, requestedRoute);
                         delete pendingRoutes[vehicleId];
                         
-                        res.json({ message: `Da xac nhan thue xe #${vehicleId} cho hop dong #${rentalId} thanh cong! Khoi chay thiet bi dinh vi.` });
+                        res.json({ message: `Da xac nhan thue xe #${vehicleId} cho hop dong #${rentalId} thành công! Khoi chay thiet bi dinh vi.` });
                     });
                 });
             });
@@ -1380,6 +1379,7 @@ app.post('/api/v1/rentals/terminate', (req, res) => {
         db.run(`UPDATE Rentals SET Status = 'Terminated' WHERE RentalID = ?`, [rentalId], function(err) {
             if (err) return res.status(500).send("Lỗi DB");
             db.run(`UPDATE Vehicles SET Status = 'Available' WHERE VehicleID = ?`, [vehicleId], (err) => {
+                terminateGpsSession(vehicleId);
                 res.send("[V1] Đã kết thúc hợp đồng thuê xe. Cảnh báo: Lịch sử GPS và Danh bạ vẫn lưu trong hệ thống giải trí của xe!");
             });
         });
@@ -1419,7 +1419,7 @@ app.post('/api/v2/rentals/terminate', verifyTokenV2, (req, res) => {
 app.post('/api/v2/rentals/rent', verifyTokenV2, (req, res) => {
     const { vehicleId } = req.body;
     
-    // Kiểm tra Custom Header chống bên thứ 3 phát động request (CSRF/Spam Protection)
+    // Kiểm tra Custom Header chống bên thứ 3 phút động request (CSRF/Spam Protection)
     const gatekeeperHeader = req.headers['x-rentalshield-gatekeeper'];
     if (gatekeeperHeader !== 'client-v2-active') {
         return res.status(403).json({ error: "[V2] Từ chối truy cập: Yêu cầu không hợp lệ từ nguồn chưa xác thực!" });
@@ -1463,7 +1463,7 @@ app.post('/api/v2/rentals/rent', verifyTokenV2, (req, res) => {
 
                     // Ghi hoặc cập nhật thông tin giải trí của xe
                     db.run(`INSERT OR REPLACE INTO VehicleInfotainment (VehicleID, SyncedContacts, GPSHistory, ActiveBluetoothDevice) VALUES (?, ?, ?, ?)`,
-                        [vehicleId, encryptedContacts, encryptedGps, bluetoothDevice], (err) => {
+                        [vehicleId, encryptedContacts, encryptedGps, bluetoothDevice + ' (Đang kết nối)'], (err) => {
                             if (err) return res.status(500).json({ error: "Lỗi đồng bộ thông tin giải trí trên xe." });
                         // V3: Khởi động phiên GPS bảo mật (Envelope Encryption)
                         initGpsSession(vehicleId, req.user.AccountID, routeType);
@@ -1512,10 +1512,10 @@ app.post('/api/v2/telematics/command', verifyTokenV2, (req, res) => {
     });
 
     function telematicsCommandLogic() {
-        // T�nh to�n lại chữ kỳ HMAC
+        // Tính toán lại chữ ký HMAC
         // Hỗ trợ cả 2 định dạng:
         // 1. command + vehicleId (cho admin)
-        // 2. vehicleId + ":" + command + ":" + timestamp (cho client - c� chống replay)
+        // 2. vehicleId + ":" + command + ":" + timestamp (cho client - có chống replay)
         const expectedSignatureAdmin = crypto.createHmac('sha256', TELEMATICS_SECRET)
                                         .update(command + vehicleId)
                                         .digest('hex');
@@ -1535,14 +1535,14 @@ app.post('/api/v2/telematics/command', verifyTokenV2, (req, res) => {
         
         const s = gpsState[vehicleId];
         
-        // Kiểm tra khoảng c�ch chủ xe (Proximity Verification) để chống Relay Attack
+        // Kiểm tra khoảng cách chủ xe (Proximity Verification) để chống Relay Attack
         if (s && userLat !== undefined && userLon !== undefined) {
             const distKm = haversineKm(parseFloat(userLat), parseFloat(userLon), s.lat, s.lon);
             if (distKm > 0.1) { // 100 meters
-                const alertMsg = `🚨 PH�T HIỆN TẤN C�NG RELAY: Lệnh viễn th�ng ${command} cho xe #${vehicleId} bị từ chối do chủ xe ở qu� xa (${(distKm*1000).toFixed(0)}m > 100m).`;
+                const alertMsg = `🚨 PHÁT HIỆN TẤN CÔNG RELAY: Lệnh viễn thông ${command} cho xe #${vehicleId} bị từ chối do chủ xe ở quá xa (${(distKm*1000).toFixed(0)}m > 100m).`;
                 db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
                     [vehicleId, req.user.AccountID, 'RELAY_ATTACK_DETECTION', alertMsg, 'HIGH']);
-                return res.status(403).json({ error: `[Bảo Mật] Từ chối lệnh: Khoảng c�ch qu� xa (${(distKm*1000).toFixed(0)}m > 100m). Nghi ngờ tấn c�ng lặp t�n hiệu (Relay Attack).` });
+                return res.status(403).json({ error: `[Bảo Mật] Từ chối lệnh: Khoảng cách quá xa (${(distKm*1000).toFixed(0)}m > 100m). Nghi ngờ tấn công lặp tín hiệu (Relay Attack).` });
             }
         }
         
@@ -1550,7 +1550,7 @@ app.post('/api/v2/telematics/command', verifyTokenV2, (req, res) => {
             wipedBluetoothVehicles.add(parseInt(vehicleId));
             wipedBluetoothVehicles.add(parseInt(vehicleId));
         db.run(`DELETE FROM VehicleInfotainment WHERE VehicleID = ?`, [vehicleId], function(err) {
-                res.json({ message: `[V2] Xe ID ${vehicleId} x�c nhận chữ k� HMAC hợp lệ. Đ� thực thi lệnh WIPE an to�n!` });
+                res.json({ message: `[V2] Xe ID ${vehicleId} xác nhận chữ ký HMAC hợp lệ. Đã thực thi lệnh WIPE an toàn!` });
             });
         } else if (command === 'LOCK') {
             if (s) {
@@ -1561,7 +1561,7 @@ app.post('/api/v2/telematics/command', verifyTokenV2, (req, res) => {
                 pushSSE(vehicleId, { type: 'ENGINE_LOCKED', vehicleId, lockedBy: req.user.Username, ts: Date.now() });
             }
             db.run(`UPDATE Vehicles SET Status = 'Locked' WHERE VehicleID = ?`, [vehicleId]);
-            res.json({ message: `[V2] Đ� kh�a xe ID ${vehicleId} từ xa th�nh c�ng! Vận tốc đưa về 0.` });
+            res.json({ message: `[V2] Đã khóa xe ID ${vehicleId} từ xa thành công! Vận tốc đưa về 0.` });
         } else if (command === 'UNLOCK') {
             if (s) {
                 s.isLocked = false;
@@ -1573,8 +1573,8 @@ app.post('/api/v2/telematics/command', verifyTokenV2, (req, res) => {
             db.run(`UPDATE Vehicles SET Status = 'Rented' WHERE VehicleID = ?`, [vehicleId]);
             db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
                 [vehicleId, req.user.AccountID, 'ENGINE_UNLOCK',
-                 `Động cơ xe #${vehicleId} được mở kh�a từ xa bởi ${req.user.Username}.`, 'MEDIUM']);
-            res.json({ message: `[V2] Đ� mở kh�a xe ID ${vehicleId} từ xa th�nh c�ng! Vận tốc kh�i phục.` });
+                 `Động cơ xe #${vehicleId} được mở khóa từ xa bởi ${req.user.Username}.`, 'MEDIUM']);
+            res.json({ message: `[V2] Đã mở khóa xe ID ${vehicleId} từ xa thành công! Vận tốc khôi phục.` });
         } else if (command === 'RESTART') {
             let activeSession = gpsState[vehicleId];
             if (!activeSession) {
@@ -1604,12 +1604,12 @@ app.post('/api/v2/telematics/command', verifyTokenV2, (req, res) => {
 
                 db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
                     [vehicleId, req.user.AccountID, 'DEVICE_RESTART',
-                     `Thiết bị định vị tr�n xe #${vehicleId} khởi động lại th�nh c�ng (Kh�a động cơ: ${activeSession.isLocked ? 'ĐANG KH�A' : 'KH�NG'})`, 'INFO']);
+                     `Thiết bị định vị trên xe #${vehicleId} khởi động lại thành công (Khóa động cơ: ${activeSession.isLocked ? 'ĐANG KHÓA' : 'KHÔNG'})`, 'INFO']);
 
                 pushSSE(vehicleId, { type: 'DEVICE_RESTART', vehicleId, restartedBy: req.user.Username, isLocked: activeSession.isLocked, ts: Date.now() });
-                res.json({ message: `[V2] Đ� khởi động lại thiết bị định vị tr�n xe ID ${vehicleId} th�nh c�ng!` });
+                res.json({ message: `[V2] Đã khởi động lại thiết bị định vị trên xe ID ${vehicleId} thành công!` });
             } else {
-                res.status(500).json({ error: `Kh�ng thể khởi chạy phi�n định vị để restart.` });
+                res.status(500).json({ error: `Không thể khởi chạy phiên định vị để restart.` });
             }
         } else if (command.startsWith('SET_GEOFENCE:')) {
             const radiusKm = parseFloat(command.split(':')[1]) || 5;
@@ -1618,10 +1618,10 @@ app.post('/api/v2/telematics/command', verifyTokenV2, (req, res) => {
                 s.geofenceViolating = false;
             }
             db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
-                [vehicleId, req.user.AccountID, 'GEOFENCE_SET', `Thiết lập v�ng địa l� an to�n b�n k�nh ${radiusKm}km`, 'INFO']);
-            res.json({ message: `[V2] Đ� thiết lập v�ng an to�n b�n k�nh ${radiusKm}km cho xe ID ${vehicleId}!` });
+                [vehicleId, req.user.AccountID, 'GEOFENCE_SET', `Thiết lập vùng địa lý an toàn bán kính ${radiusKm}km`, 'INFO']);
+            res.json({ message: `[V2] Đã thiết lập vùng an toàn bán kính ${radiusKm}km cho xe ID ${vehicleId}!` });
         } else {
-            res.status(400).json({ error: `[V2] Lệnh kh�ng x�c định: ${command}` });
+            res.status(400).json({ error: `[V2] Lệnh không xác định: ${command}` });
         }
     }
 });
@@ -1771,6 +1771,21 @@ let HAIPHONG_ROUTE = [...BASE_HAIPHONG_ROUTE];
 let NHATRANG_ROUTE = [...BASE_NHATRANG_ROUTE];
 let CANTHO_ROUTE = [...BASE_CANTHO_ROUTE];
 
+function getDefaultRouteForVehicle(vehicleId) {
+    const vid = parseInt(vehicleId);
+    if (vid === 1) return { route: HANOI_ROUTE, type: 'hanoi' };
+    if (vid === 2) return { route: NORTH_VIETNAM_ROUTE, type: 'north_vietnam' };
+    if (vid === 3) return { route: HAIPHONG_ROUTE, type: 'haiphong' };
+    if (vid === 4) return { route: AIRPORT_ROUTE, type: 'airport' };
+    if (vid === 5) return { route: DANANG_ROUTE, type: 'danang' };
+    if (vid === 6) return { route: NHATRANG_ROUTE, type: 'nhatrang' };
+    if (vid === 7) return { route: HCMC_ROUTE, type: 'hcmc' };
+    if (vid === 8) return { route: WEST_ROUTE, type: 'west' };
+    if (vid === 9) return { route: EAST_ROUTE, type: 'east' };
+    if (vid === 10) return { route: CANTHO_ROUTE, type: 'cantho' };
+    return { route: HANOI_ROUTE, type: 'hanoi' };
+}
+
 // Hàm fetch lộ trình từ OSRM
 async function fetchOSRMRoute(waypoints) {
     const https = require('https');
@@ -1887,13 +1902,25 @@ function reverseGeocode(lat, lon) {
 function sendGpsSSE(vehicleId, eventType, data) {
     const s = gpsState[vehicleId];
     if (s && s.clients) {
-        s.clients.forEach(client => {
-            client.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
-        });
+        if (eventType === 'report') {
+            db.get(`SELECT OwnerID FROM Vehicles WHERE VehicleID = ?`, [vehicleId], (err, vehicleRow) => {
+                const ownerId = vehicleRow ? vehicleRow.OwnerID : null;
+                s.clients.forEach(client => {
+                    const clientAccountId = client.user ? client.user.AccountID : null;
+                    if (clientAccountId === 1 || (ownerId && clientAccountId === ownerId)) {
+                        client.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
+                    }
+                });
+            });
+        } else {
+            s.clients.forEach(client => {
+                client.write(`event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`);
+            });
+        }
     }
 }
 
-// Lập lịch 1 giờ (3,600,000 ms) gửi báo cáo định kỳ theo yêu cầu của thầy giáo
+// Gửi báo cáo định kỳ 1 giờ (Mô phỏng: gửi mỗi 30 giây trên demo để dễ kiểm tra trên frontend)
 setInterval(async () => {
     console.log('[SYSTEM] Bắt đầu tạo báo cáo GPS định kỳ 1 giờ...');
     
@@ -1905,24 +1932,41 @@ setInterval(async () => {
         // Gọi API lấy Tên đường, phường xã
         const address = await reverseGeocode(s.lat, s.lon);
         
-        const reportMsg = `📍 BÁO CÁO HÀNH TRÌNH TỔNG HỢP (1 GIỜ) - XE #${vehicleId}:
-- Vĩ độ: ${s.lat.toFixed(6)}
-- Kinh độ: ${s.lon.toFixed(6)}
+        db.get(`SELECT OwnerID FROM Vehicles WHERE VehicleID = ?`, [vehicleId], (err, vehicleRow) => {
+            const ownerId = vehicleRow ? vehicleRow.OwnerID : null;
+            
+            const queryOwner = ownerId 
+                ? `SELECT FullName FROM Accounts WHERE AccountID = ?` 
+                : null;
+                
+            db.get(queryOwner || `SELECT 'Hệ thống' AS FullName`, ownerId ? [ownerId] : [], (err, ownerRow) => {
+                const ownerName = ownerRow ? ownerRow.FullName : 'Hệ thống';
+                
+                db.get(`SELECT FullName FROM Accounts WHERE AccountID = ?`, [s.accountId], (err, driverRow) => {
+                    const driverName = driverRow ? driverRow.FullName : 'Không rõ';
+                    
+                    const reportMsg = `📍 BÁO CÁO HÀNH TRÌNH TỔNG HỢP (1 GIỜ) - XE #${vehicleId}:
+- Chủ xe: ${ownerName}
+- Người lái: ${driverName}
 - Vị trí hiện tại: ${address}
+- Tọa độ: (${s.lat.toFixed(6)}, ${s.lon.toFixed(6)})
 - Tốc độ trung bình: ${Math.round(s.speed)} km/h
 - Trạng thái an ninh: Ổn định (Chống phá sóng hoạt động tốt)`;
 
-        const report = {
-            type: 'periodic_report',
-            vehicleId: vehicleId,
-            message: reportMsg,
-            timestamp: new Date().toISOString()
-        };
-        
-        // Gửi qua SSE
-        sendGpsSSE(vehicleId, 'report', report);
+                    const report = {
+                        type: 'periodic_report',
+                        vehicleId: parseInt(vehicleId),
+                        message: reportMsg,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    // Gửi qua SSE
+                    sendGpsSSE(vehicleId, 'report', report);
+                });
+            });
+        });
     }
-}, 3600 * 1000);
+}, 30000); // 30 giây gửi 1 lần (mô phỏng báo cáo 1 giờ)
 
 /** Tính góc phương vị (bearing) từ điểm 1 → điểm 2 */
 function calcBearing(lat1, lon1, lat2, lon2) {
@@ -1937,21 +1981,29 @@ function calcBearing(lat1, lon1, lat2, lon2) {
 async function initGpsSession(vehicleId, accountId, routeType = 'hanoi', restoreGps = null) {
     if (gpsState[vehicleId] && !gpsState[vehicleId].isTampered) return;
 
-    // Assign different route types to different cars if not explicitly requested
-    if (routeType === 'hanoi') {
-        if (vehicleId === 2) routeType = 'hanoi';
-        else if (vehicleId === 3) routeType = 'haiphong';
-        else if (vehicleId === 4) routeType = 'danang';
-        else if (vehicleId === 5) routeType = 'danang';
-        else if (vehicleId === 6) routeType = 'nhatrang';
-        else if (vehicleId === 7) routeType = 'hcmc';
-        else if (vehicleId === 8) routeType = 'hcmc';
-        else if (vehicleId === 9) routeType = 'cantho';
-        else if (vehicleId === 10) routeType = 'cantho';
-        else routeType = 'hanoi';
+    // Check if there is an active rental for this vehicle (chỉ lái xe khi có tài khoản đăng ký lái)
+    const activeRental = await new Promise((resolve) => {
+        db.get(`SELECT AccountID, RouteType FROM Rentals WHERE VehicleID = ? AND Status = 'Active'`, [vehicleId], (err, row) => {
+            resolve(row);
+        });
+    });
+
+    if (!activeRental) {
+        console.log(`[V3-GPS] Xe #${vehicleId} không có tài khoản đăng ký lái (hợp đồng hoạt động). Không cho phép di chuyển.`);
+        return;
     }
 
-    // Sinh DEK (Data Encryption Key) ngẫu nhi�n cho phi�n n�y
+    // Assign unique route types to all 10 cars
+    let finalRouteType = routeType;
+    if (activeRental.RouteType && activeRental.RouteType !== 'hanoi') {
+        finalRouteType = activeRental.RouteType;
+    }
+    if (finalRouteType === 'hanoi') {
+        finalRouteType = getDefaultRouteForVehicle(vehicleId).type;
+    }
+    routeType = finalRouteType;
+
+    // Sinh DEK (Data Encryption Key) ngẫu nhiên cho phiên này
     const dek = crypto.randomBytes(32);
 
     // Bọc DEK bằng RSA Public Key của server (Envelope Encryption)
@@ -1973,14 +2025,14 @@ async function initGpsSession(vehicleId, accountId, routeType = 'hanoi', restore
 
     let routeIndex = 0;
     if (restoreGps && restoreGps.Lat && restoreGps.Lon) {
-        // T�i tạo lại vị tr� bằng c�ch t�m điểm gần nhất tr�n lộ tr�nh đ�ng v�ng
+        // Tái tạo lại vị trí bằng cách tìm điểm gần nhất trên lộ trình đúng vùng
         let minDist = 9999;
         for (let i = 0; i < route.length; i++) {
             let d = haversineKm(restoreGps.Lat, restoreGps.Lon, route[i].lat, route[i].lon);
             if (d < minDist) { minDist = d; routeIndex = i; }
         }
     } else {
-        // Chọn điểm xuất ph�t ngẫu nhi�n tr�n lộ tr�nh đ�ng v�ng c� sẵn
+        // Chọn điểm xuất phút ngẫu nhiên trên lộ trình đúng vùng có sẵn
         routeIndex = Math.floor(Math.random() * route.length);
     }
     
@@ -2029,7 +2081,7 @@ async function initGpsSession(vehicleId, accountId, routeType = 'hanoi', restore
         intervalId: null
     };
 
-    // Kiểm tra trạng th�i kh�a từ cơ sở dữ liệu để cập nhật v� khởi chạy định vị
+    // Kiểm tra trạng thái khóa từ cơ sở dữ liệu để cập nhật và khởi chạy định vị
     db.get(`SELECT Status FROM Vehicles WHERE VehicleID = ?`, [vehicleId], (err, row) => {
         if (gpsState[vehicleId]) {
             if (row && row.Status === 'Locked') {
@@ -2037,10 +2089,10 @@ async function initGpsSession(vehicleId, accountId, routeType = 'hanoi', restore
                 gpsState[vehicleId].speed = 0;
                 gpsState[vehicleId].targetSpeed = 0;
                 gpsState[vehicleId].mode = 'LOCKED';
-                console.log(`[V3-GPS] Xe #${vehicleId} khởi tạo ở trạng th�i KH�A từ CSDL.`);
+                console.log(`[V3-GPS] Xe #${vehicleId} khởi tạo ở trạng thái KHÓA từ CSDL.`);
             }
             startGpsLoop(vehicleId);
-            console.log(`[V3-GPS] Khởi động phi�n xe #${vehicleId} | DEK: AES-256-GCM | Bọc: RSA-OAEP-SHA256`);
+            console.log(`[V3-GPS] Khởi động phiên xe #${vehicleId} | DEK: AES-256-GCM | Bọc: RSA-OAEP-SHA256`);
         }
     });
 }
@@ -2121,7 +2173,7 @@ function startGpsLoop(vehicleId) {
             if (!st || st.isTampered) return;
 
             const btDevice = infoRow?.ActiveBluetoothDevice || '';
-            const isBtOffline = !btDevice || /offline|ngắt|ngat/i.test(btDevice) || !/kết nối|connect/i.test(btDevice);
+            const isBtOffline = !btDevice || /offline|ngắt|ngat|không|khong|chưa|chua|off|vô chủ|vo chu|ngắt kết nối/i.test(btDevice);
 
             if (st.isLocked || isBtOffline) {
                 st.speed = 0;
@@ -2147,13 +2199,13 @@ function startGpsLoop(vehicleId) {
                     distanceFromCenter: haversineKm(st.geofence.lat, st.geofence.lon, st.lat, st.lon),
                     geofence: st.geofence,
                     pathPoints: st.path.slice(-25),
-                    currentWaypoint: st.isLocked ? 'Động cơ bị kh�a' : 'Hộp đen ngoại tuyến',
+                    currentWaypoint: st.isLocked ? 'Động cơ bị khóa' : 'Hộp đen ngoại tuyến',
                     nextWaypoint: '',
                     isLocked: st.isLocked,
                     ts: Date.now(),
                     note: st.isLocked 
-                        ? 'Động cơ bị kh�a từ xa � Thiết bị vẫn hoạt động nhưng vận tốc = 0'
-                        : 'Hộp đen ngoại tuyến (ActiveBluetoothDevice Offline) � Vận tốc = 0'
+                        ? 'Động cơ bị khóa từ xa — Thiết bị vẫn hoạt động nhưng vận tốc = 0'
+                        : 'Hộp đen ngoại tuyến (ActiveBluetoothDevice Offline) — Vận tốc = 0'
                 });
                 return;
             }
@@ -2173,7 +2225,7 @@ function startGpsLoop(vehicleId) {
             let speedMultiplier = 1;
 
             // ── ROUTE-FOLLOWING GPS MODE ──
-            const dt = 3; // gi�y mỗi tick
+            const dt = 3; // giây mỗi tick
             const targetBase = (st.routeType === 'north_vietnam' || st.routeType === 'airport') ? 80 : 40;
             
             if (!st.targetSpeed || Math.abs(st.speed - st.targetSpeed) < 3) {
@@ -2228,12 +2280,13 @@ function startGpsLoop(vehicleId) {
                     st.lastAlertTime = now;
                     db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
                         [vehicleId, st.accountId, 'GEOFENCE_VIOLATION',
-                         `Xe #${vehicleId} vượt v�ng an to�n ${st.geofence.radiusKm}km! Khoảng c�ch: ${dist.toFixed(2)}km | Tọa độ: (${st.lat.toFixed(5)}, ${st.lon.toFixed(5)})`,
+                         `Xe #${vehicleId} vượt vùng an toàn ${st.geofence.radiusKm}km! Khoảng cách: ${dist.toFixed(2)}km | Tọa độ: (${st.lat.toFixed(5)}, ${st.lon.toFixed(5)})`,
                          'HIGH']);
                 }
             } else if (!outside) st.geofenceViolating = false;
 
             const locName = getNearestLocationName(st.routeType, st.lat, st.lon);
+            st.mode = 'GPS';
 
             db.run(`UPDATE VehicleGPS SET Lat=?, Lon=?, Speed=?, Heading=?, Mode=?, Timestamp=?, Address=?, LastReported='Vừa xong' WHERE VehicleID=?`,
                 [+st.lat.toFixed(6), +st.lon.toFixed(6), +st.speed.toFixed(1), +st.heading.toFixed(1), 'GPS', new Date().toISOString(), locName, vehicleId]);
@@ -2253,8 +2306,8 @@ function startGpsLoop(vehicleId) {
                 if (st.tripLimit.violated && (now - st.tripLimit.lastTripAlertTime > 30000)) {
                     st.tripLimit.lastTripAlertTime = now;
                     const reason = tripTimeExpired 
-                        ? `⏰ Hết thời gian h�nh tr�nh (${st.tripLimit.limitMinutes} ph�t)`
-                        : `📍 Vượt b�n k�nh cho ph�p ${st.tripLimit.radiusKm}km (c�ch điểm xuất ph�t ${tripDistKm.toFixed(2)}km)`;
+                        ? `⏰ Hết thời gian hành trình (${st.tripLimit.limitMinutes} phút)`
+                        : `📍 Vượt bán kính cho phép ${st.tripLimit.radiusKm}km (cách điểm xuất phát ${tripDistKm.toFixed(2)}km)`;
                     db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
                         [vehicleId, st.accountId, 'GEOFENCE_VIOLATION',
                          `🚨 TRIP VIOLATION - Xe #${vehicleId}: ${reason} | Từ "${st.tripLimit.fromName}" → "${st.tripLimit.toName}"`,
@@ -2267,7 +2320,7 @@ function startGpsLoop(vehicleId) {
                     lat: st.lat, lon: st.lon, speed: st.speed, heading: st.heading,
                     outsideGeofence: outside, distanceFromCenter: dist,
                     geofence: st.geofence, pathPoints: st.path.slice(-25),
-                    currentWaypoint: currentWp?.name || 'Tr�n đường',
+                    currentWaypoint: currentWp?.name || 'Trên đường',
                     nextWaypoint: (route[(st.routeIndex + 1) % route.length])?.name || '',
                     routeIndex: st.routeIndex, routeTotal: route.length - 1,
                     routeProgress: (route.length > 1 ? st.routeIndex / (route.length - 1) : 0),
@@ -2293,7 +2346,7 @@ function startGpsLoop(vehicleId) {
                     lat: st.lat, lon: st.lon, speed: st.speed, heading: st.heading,
                     outsideGeofence: outside, distanceFromCenter: dist,
                     geofence: st.geofence, pathPoints: st.path.slice(-25),
-                    currentWaypoint: currentWp?.name || 'Tr�n đường',
+                    currentWaypoint: currentWp?.name || 'Trên đường',
                     nextWaypoint: (route[(st.routeIndex + 1) % route.length])?.name || '',
                     routeIndex: st.routeIndex,
                     routeTotal: route.length - 1,
@@ -2311,16 +2364,20 @@ function startGpsLoop(vehicleId) {
 /** Kết thúc phiên GPS: dừng loop, Zeroize DEK */
 function terminateGpsSession(vehicleId) {
     const s = gpsState[vehicleId];
-    if (!s) return;
-    if (s.intervalId) clearInterval(s.intervalId);
-    pushSSE(vehicleId, { type: 'SESSION_ENDED', vehicleId });
-    if (s.dek) s.dek.fill(0); // ZEROIZE DEK
-    delete gpsState[vehicleId];
+    if (s) {
+        if (s.intervalId) clearInterval(s.intervalId);
+        pushSSE(vehicleId, { type: 'SESSION_ENDED', vehicleId });
+        if (s.dek) s.dek.fill(0); // ZEROIZE DEK
+        delete gpsState[vehicleId];
+    }
     
-    // Đảm bảo Test Dashboard mất tín hiệu xe này
-    db.run(`UPDATE VehicleGPS SET Mode = 'Parked', Speed = 0, LastReported = 'Đã tắt thiết bị' WHERE VehicleID = ?`, [vehicleId]);
+    // Ngừng xe ngay lập tức, chuyển tốc độ về 0, đánh dấu offline
+    db.run(`UPDATE VehicleGPS SET Mode = 'OFFLINE', Speed = 0, LastReported = 'Đã tắt thiết bị' WHERE VehicleID = ?`, [vehicleId]);
     
-    console.log(`[V3-GPS] Kết thúc phiên xe #${vehicleId} — DEK đã Zeroize`);
+    // Chuyển hộp đen về ngắt kết nối
+    db.run(`UPDATE VehicleInfotainment SET ActiveBluetoothDevice = 'Ngắt kết nối (Offline)' WHERE VehicleID = ?`, [vehicleId]);
+    
+    console.log(`[V3-GPS] Kết thúc phiên xe #${vehicleId} — Hộp đen về Ngắt kết nối (Offline) & Động cơ dừng.`);
 }
 
 
@@ -2336,8 +2393,8 @@ app.get('/api/v2/vehicles/gps-stream/:vehicleId', verifyTokenV2, async (req, res
 
     if (!gpsState[vehicleId]) await initGpsSession(vehicleId, req.user.AccountID);
     const s = gpsState[vehicleId];
-    if (!s) return res.end(); // Fail safe
-    
+    if (!s) return res.end();
+    res.user = req.user;
     s.clients.add(res);
 
     // Gửi trạng thái ban đầu ngay lập tức
@@ -2428,13 +2485,13 @@ app.post('/api/v2/vehicles/set-geofence', verifyTokenV2, (req, res) => {
 
     function setGeofenceLogic() {
         const s = gpsState[vehicleId];
-        if (!s) return res.status(404).json({ error: 'Phi�n GPS xe kh�ng hoạt động.' });
+        if (!s) return res.status(404).json({ error: 'Phiên GPS xe không hoạt động.' });
         s.geofence = { lat: s.lat, lon: s.lon, radiusKm: Math.max(0.5, Math.min(50, parseFloat(radiusKm) || 5)) };
         s.geofenceViolating = false;
         db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
             [vehicleId, s.accountId, 'GEOFENCE_SET',
-             `Cập nhật v�ng an to�n xe #${vehicleId}: ${s.geofence.radiusKm}km từ (${s.lat.toFixed(5)}, ${s.lon.toFixed(5)})`, 'INFO']);
-        res.json({ message: `V�ng an to�n cập nhật: ${s.geofence.radiusKm}km từ vị tr� hiện tại`, geofence: s.geofence });
+             `Cập nhật vùng an toàn xe #${vehicleId}: ${s.geofence.radiusKm}km từ (${s.lat.toFixed(5)}, ${s.lon.toFixed(5)})`, 'INFO']);
+        res.json({ message: `Vùng an toàn cập nhật: ${s.geofence.radiusKm}km từ vị trí hiện tại`, geofence: s.geofence });
     }
 });
 
@@ -2526,33 +2583,33 @@ app.post('/api/v2/vehicles/lock-engine', verifyTokenV2, (req, res) => {
     function lockEngineLogic() {
         const now = Date.now();
 
-        // [1] Kiểm tra t�nh mới của lệnh (chống tấn c�ng ph�t lại)
+        // [1] Kiểm tra tính mới của lệnh (chống tấn công phát lại)
         if (!timestamp || Math.abs(now - parseInt(timestamp)) > 30000) {
             db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
                 [vehicleId, req.user.AccountID, 'REPLAY_ATTACK',
-                 `Tấn c�ng ph�t lại lệnh kh�a xe #${vehicleId}! Độ lệch: ${Math.abs(now - parseInt(timestamp))}ms > 30000ms`, 'HIGH']);
-            return res.status(400).json({ error: '[V3-REPLAY] Từ chối: Timestamp lệnh qu� cũ � tấn c�ng ph�t lại (Replay Attack). Lệnh phải trong v�ng 30 gi�y.' });
+                 `Tấn công phát lại lệnh khóa xe #${vehicleId}! Độ lệch: ${Math.abs(now - parseInt(timestamp))}ms > 30000ms`, 'HIGH']);
+            return res.status(400).json({ error: '[V3-REPLAY] Từ chối: Timestamp lệnh quá cũ — tấn công phát lại (Replay Attack). Lệnh phải trong vòng 30 giây.' });
         }
 
-        // [2] X�c thực chữ k� HMAC-SHA256
+        // [2] Xác thực chữ ký HMAC-SHA256
         const expected = crypto.createHmac('sha256', TELEMATICS_SECRET)
             .update(`LOCK_ENGINE:${vehicleId}:${timestamp}`).digest('hex');
         if (signature !== expected) return res.status(403).json({ error: '[V3] Chữ ký HMAC lệnh khóa động cơ không hợp lệ!' });
 
         const s = gpsState[vehicleId];
 
-        // Kiểm tra khoảng c�ch chủ xe (Proximity Verification) để chống Relay Attack
+        // Kiểm tra khoảng cách chủ xe (Proximity Verification) để chống Relay Attack
         if (s && userLat !== undefined && userLon !== undefined) {
             const distKm = haversineKm(parseFloat(userLat), parseFloat(userLon), s.lat, s.lon);
             if (distKm > 0.1) { // 100 meters
-                const alertMsg = `🚨 PH�T HIỆN TẤN C�NG RELAY: Y�u cầu kh�a động cơ khẩn cấp xe #${vehicleId} bị từ chối do chủ xe ở qu� xa (${(distKm*1000).toFixed(0)}m > 100m).`;
+                const alertMsg = `🚨 PHÁT HIỆN TẤN CÔNG RELAY: Yêu cầu khóa động cơ khẩn cấp xe #${vehicleId} bị từ chối do chủ xe ở quá xa (${(distKm*1000).toFixed(0)}m > 100m).`;
                 db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
                     [vehicleId, req.user.AccountID, 'RELAY_ATTACK_DETECTION', alertMsg, 'HIGH']);
-                return res.status(403).json({ error: `[Bảo Mật] Từ chối lệnh: Khoảng c�ch qu� xa (${(distKm*1000).toFixed(0)}m > 100m). Nghi ngờ tấn c�ng lặp t�n hiệu (Relay Attack).` });
+                return res.status(403).json({ error: `[Bảo Mật] Từ chối lệnh: Khoảng cách quá xa (${(distKm*1000).toFixed(0)}m > 100m). Nghi ngờ tấn công lặp tín hiệu (Relay Attack).` });
             }
         }
 
-        // [3] Thực thi kh�a động cơ
+        // [3] Thực thi khóa động cơ
         if (s) {
             s.isLocked = true;
             s.speed = 0;
@@ -2644,8 +2701,12 @@ app.get('/api/v2/vehicles/route', (req, res) => {
     const { vehicleId } = req.query;
     let activeRoute = HANOI_ROUTE;
     
-    if (vehicleId && gpsState[vehicleId]) {
-        activeRoute = gpsState[vehicleId].route;
+    if (vehicleId) {
+        if (gpsState[vehicleId]) {
+            activeRoute = gpsState[vehicleId].route;
+        } else {
+            activeRoute = getDefaultRouteForVehicle(vehicleId).route;
+        }
     }
     
     res.json({ 
@@ -2674,7 +2735,7 @@ app.post('/api/v2/vehicles/change-route', (req, res) => {
         s.route = HANOI_ROUTE;
     }
     
-    // Đặt lại điểm xuất phát ngẫu nhiên trên tuyến mới
+    // Đặt lại điểm xuất phút ngẫu nhiên trên tuyến mới
     const startIdx = Math.floor(Math.random() * (s.route.length - 1));
     s.routeIndex = startIdx;
     s.lat = s.route[startIdx].lat;
@@ -2708,26 +2769,29 @@ app.post('/api/v2/vehicles/force-report', async (req, res) => {
     if (!s || s.isTampered) return res.status(404).json({ error: 'Xe không hoạt động.' });
     
     const address = await reverseGeocode(s.lat, s.lon);
-    const reportMsg = `📍 BÁO CÁO HÀNH TRÌNH TỔNG HỢP (1 GIỜ) - XE #${vehicleId}:
-- Vĩ độ: ${s.lat.toFixed(6)}
-- Kinh độ: ${s.lon.toFixed(6)}
+    db.get(`SELECT FullName FROM Accounts WHERE AccountID = ?`, [s.accountId], (err, userRow) => {
+        const ownerName = userRow ? userRow.FullName : 'Không rõ';
+        const reportMsg = `📍 BÁO CÁO HÀNH TRÌNH TỔNG HỢP (1 GIỜ) - XE #${vehicleId}:
+- Chủ xe/Người lái: ${ownerName}
 - Vị trí hiện tại: ${address}
+- Tọa độ: (${s.lat.toFixed(6)}, ${s.lon.toFixed(6)})
 - Tốc độ trung bình: ${Math.round(s.speed)} km/h
 - Trạng thái an ninh: Ổn định (Chống phá sóng hoạt động tốt)`;
 
-    const report = {
-        type: 'periodic_report',
-        vehicleId: vehicleId,
-        message: reportMsg,
-        timestamp: new Date().toISOString()
-    };
-    sendGpsSSE(vehicleId, 'report', report);
-    
-    res.json({ success: true, message: 'Đã gửi báo cáo thủ công qua SSE thành công!' });
+        const report = {
+            type: 'periodic_report',
+            vehicleId: parseInt(vehicleId),
+            message: reportMsg,
+            timestamp: new Date().toISOString()
+        };
+        sendGpsSSE(vehicleId, 'report', report);
+        
+        res.json({ success: true, message: 'Đã gửi báo cáo thủ công qua SSE thành công!' });
+    });
 });
 
 // ── V3 API: Đặt giới hạn hành trình (Route Boundary) ─────────────────
-// Giới hạn xe chỉ được di chuyển từ điểm xuất phát đến bán kính nhất định trong thời gian X phút
+// Giới hạn xe chỉ được di chuyển từ điểm xuất phút đến bán kính nhất định trong thời gian X phút
 app.post('/api/v2/vehicles/set-trip-limit', verifyTokenV2, (req, res) => {
     const { vehicleId, fromLat, fromLon, fromName, toLat, toLon, toName, limitMinutes, radiusKm } = req.body;
 
@@ -2744,20 +2808,20 @@ app.post('/api/v2/vehicles/set-trip-limit', verifyTokenV2, (req, res) => {
 
     function setTripLimitLogic() {
         const s = gpsState[vehicleId];
-        if (!s) return res.status(404).json({ error: 'Phi�n GPS kh�ng hoạt động cho xe n�y.' });
-        if (!limitMinutes || limitMinutes <= 0) return res.status(400).json({ error: 'Thời gian giới hạn kh�ng hợp lệ.' });
+        if (!s) return res.status(404).json({ error: 'Phiên GPS không hoạt động cho xe này.' });
+        if (!limitMinutes || limitMinutes <= 0) return res.status(400).json({ error: 'Thời gian giới hạn không hợp lệ.' });
 
         const now = Date.now();
         s.tripLimit = {
             enabled: true,
             fromLat: fromLat || s.lat,
             fromLon: fromLon || s.lon,
-            fromName: fromName || 'Điểm xuất ph�t',
+            fromName: fromName || 'Điểm xuất phát',
             toLat: toLat || null,
             toLon: toLon || null,
             toName: toName || 'Điểm đến',
             limitMinutes: parseInt(limitMinutes),
-            radiusKm: parseFloat(radiusKm) || 15,  // B�n k�nh v�ng h�nh tr�nh cho ph�p (km)
+            radiusKm: parseFloat(radiusKm) || 15,  // Bán kính vùng hành trình cho phép (km)
             startedAt: now,
             endsAt: now + parseInt(limitMinutes) * 60 * 1000,
             violated: false,
@@ -2766,13 +2830,13 @@ app.post('/api/v2/vehicles/set-trip-limit', verifyTokenV2, (req, res) => {
 
         db.run('INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)',
             [vehicleId, s.accountId, 'GEOFENCE_SET',
-             `Đặt giới hạn h�nh tr�nh Xe #${vehicleId}: Từ "${s.tripLimit.fromName}" → "${s.tripLimit.toName}" | B�n k�nh: ${s.tripLimit.radiusKm}km | Thời gian: ${limitMinutes} ph�t`,
+             `Đặt giới hạn hành trình Xe #${vehicleId}: Từ "${s.tripLimit.fromName}" → "${s.tripLimit.toName}" | Bán kính: ${s.tripLimit.radiusKm}km | Thời gian: ${limitMinutes} phút`,
              'INFO']);
 
         res.json({
             success: true,
             vehicleId,
-            message: `Đ� đặt giới hạn h�nh tr�nh Xe #${vehicleId} th�nh c�ng.`
+            message: `Đã đặt giới hạn hành trình Xe #${vehicleId} thành công.`
         });
     }
 });
@@ -2823,6 +2887,7 @@ app.post('/api/test/reverse-car', (req, res) => {
 app.post('/api/test/restore', async (req, res) => {
     try {
         await resetDatabase();
+        restoreGpsSessions();
         res.json({ message: "Đã khôi phục toàn bộ dữ liệu hệ thống (Database & GPS) thành công!" });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -2959,26 +3024,30 @@ app.post('/api/v2/test/bruteforce', (req, res) => {
 // 3. KỊCH BẢN VIPR WIPE (Hộp đen)
 app.post('/api/v1/test/vipr-wipe', (req, res) => {
     // V1: Không xác thực
-    const vid = req.body.vehicleId || 2;
+    const vid = parseInt(req.body.vehicleId || 2);
     const command = req.body.command || "WIPE_ALL";
     const bypassMode = req.body.bypassMode || "CAN_INJECTION";
 
-    wipedBluetoothVehicles.add(parseInt(vid));
+    wipedBluetoothVehicles.add(vid);
+    
+    // Ngừng xe ngay lập tức, chuyển tốc độ về 0, đánh dấu offline, chuyển hộp đen về ngắt kết nối (Offline)
     db.run(`UPDATE VehicleInfotainment SET GPSHistory = '[]', SyncedContacts = '[]', ActiveBluetoothDevice = 'Ngắt kết nối (Offline)' WHERE VehicleID = ?`, [vid], (err) => {
+        terminateGpsSession(vid);
+        
         // Lấy vị trí và tốc độ hiện tại của xe để báo cáo lên frontend cho chủ xe
         db.get(`SELECT Address, Speed FROM VehicleGPS WHERE VehicleID = ?`, [vid], (err, row) => {
             const address = row ? row.Address : "Không xác định";
             const speed = row ? row.Speed : 0;
-            const alertMsg = `Xe bị tấn công. Vị trí hiện tại: ${address}. Tốc độ: ${speed} km/h.`;
+            const alertMsg = `🚨 CẢNH BÁO: Hộp đen xe #${vid} bị tấn công và xóa dữ liệu (VIPR Wipe)! Trạng thái: Ngắt kết nối, Vận tốc = 0, Hộp đen Ngắt kết nối (Offline).`;
             
             db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?, ?, ?, ?, ?)`, 
-                [vid, 1, 'SYSTEM_ALERT', alertMsg, 'HIGH']);
+                [vid, 1, 'HARDWARE_TAMPER', alertMsg, 'CRITICAL']);
         });
             
         res.json({ 
             message: `[V1] Khai thác Unauthenticated Remote Command Execution thành công trên xe #${vid}!`,
-            action_taken: `Gửi gói tin giả mạo qua giao thức ${bypassMode} với lệnh ${command}.`,
-            impact: "Bypass cơ chế xác thực TCU. Toàn bộ Danh bạ, Lịch sử GPS và Kết nối Bluetooth hiện tại đã bị XÓA TRẮNG.",
+            action_taken: `Gửi gói tin giả mạo qua giao thức ${bypassMode} with command ${command}.`,
+            impact: "Bypass cơ chế xác thực TCU. Toàn bộ Danh bạ, Lịch sử GPS và Kết nối Bluetooth hiện tại đã bị XÓA TRẮNG. Xe đã ngừng di chuyển và hộp đen về Ngắt kết nối (Offline).",
             tcu_status: "WIPED"
         });
     });
