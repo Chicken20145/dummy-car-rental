@@ -1994,7 +1994,7 @@ function handleGpsData(data) {
             document.getElementById('wifi-bssids-grid').innerHTML=data.wifiBssids.map(b=>`<div style="padding:6px 10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;font-size:11px;font-family:monospace;">${b.bssid}<br><span style="color:var(--orange);">-${b.rssi}dBm</span></div>`).join('');
         }
     } else {
-        mb.textContent='GPS thuc thoi'; mb.style.color='var(--green)'; mb.style.borderColor='rgba(22,163,74,0.4)';
+        mb.textContent='GPS thực tế'; mb.style.color='var(--green)'; mb.style.borderColor='rgba(22,163,74,0.4)';
         if(mt) mt.textContent='GPS';
         const wp=document.getElementById('wifi-panel'); if(wp) wp.style.display='none';
     }
@@ -2003,8 +2003,8 @@ function handleGpsData(data) {
     if (wb) wb.textContent = `${data.currentWaypoint||''}  >  ${data.nextWaypoint||''}`;
 
     const fSt = document.getElementById('gps-fence-status');
-    if (data.outsideGeofence) { fSt.textContent='Ngoai vung!'; fSt.style.color='var(--red)'; }
-    else { fSt.textContent='Trong vung'; fSt.style.color='var(--green)'; }
+    if (data.outsideGeofence) { fSt.textContent='Ngoài vùng!'; fSt.style.color='var(--red)'; }
+    else { fSt.textContent='Trong vùng'; fSt.style.color='var(--green)'; }
     document.getElementById('gps-dist').textContent = (data.distanceFromCenter?.toFixed(2)||'--')+' km';
 
     // Update modal geofence panel if present
@@ -2043,10 +2043,10 @@ function handleGpsData(data) {
             document.getElementById('trip-max-radius').textContent = data.tripLimit.maxRadius||'--';
             const statusText = document.getElementById('trip-status-text');
             if (data.tripLimit.violated) {
-                statusText.textContent = data.tripLimit.tripTimeExpired?'HET GIO!':'VUOT GIOI HAN!';
+                statusText.textContent = data.tripLimit.tripTimeExpired?'HẾT GIỜ!':'VƯỢT GIỚI HẠN!';
                 statusText.style.color='var(--red)';
             } else {
-                statusText.textContent='Dang chay...'; statusText.style.color='var(--green)';
+                statusText.textContent='Đang chạy...'; statusText.style.color='var(--green)';
             }
         }
     }

@@ -2588,22 +2588,48 @@ app.get('/api/v2/security/alerts', verifyTokenV2, (req, res) => {
 
 // ── V3 API: Trạng thái GPS tất cả xe (Admin Dashboard) ─────────
 app.get('/api/v2/vehicles/gps-all', (req, res) => {
-    res.json(Object.values(gpsState).map(s => ({
-        vehicleId: s.vehicleId,
-        lat: s.isJammedV1 ? null : +s.lat.toFixed(5),
-        lon: s.isJammedV1 ? null : +s.lon.toFixed(5),
-        speed: s.isJammedV1 ? 0 : +s.speed.toFixed(1),
-        heading: s.isJammedV1 ? 0 : +s.heading.toFixed(1),
-        mode: s.isJammedV1 ? 'LOST_GPS' : s.mode,
-        isJammed: s.isJammed || false,
-        isJammedV1: s.isJammedV1 || false,
-        isLocked: s.isLocked,
-        isTampered: s.isTampered,
-        geofenceViolating: s.isJammedV1 ? false : s.geofenceViolating,
-        clientCount: s.clients.size,
-        geofence: s.geofence,
-        routeType: s.routeType || 'hanoi'
-    })));
+    db.all(`SELECT * FROM VehicleGPS`, (err, rows) => {
+        if (err || !rows) return res.json([]);
+        const result = rows.map(row => {
+            const s = gpsState[row.VehicleID];
+            if (s) {
+                return {
+                    vehicleId: s.vehicleId,
+                    lat: s.isJammedV1 ? null : +s.lat.toFixed(5),
+                    lon: s.isJammedV1 ? null : +s.lon.toFixed(5),
+                    speed: s.isJammedV1 ? 0 : +s.speed.toFixed(1),
+                    heading: s.isJammedV1 ? 0 : +s.heading.toFixed(1),
+                    mode: s.isJammedV1 ? 'LOST_GPS' : s.mode,
+                    isJammed: s.isJammed || false,
+                    isJammedV1: s.isJammedV1 || false,
+                    isLocked: s.isLocked,
+                    isTampered: s.isTampered,
+                    geofenceViolating: s.isJammedV1 ? false : s.geofenceViolating,
+                    clientCount: s.clients.size,
+                    geofence: s.geofence,
+                    routeType: s.routeType || 'hanoi'
+                };
+            } else {
+                return {
+                    vehicleId: row.VehicleID,
+                    lat: +row.Lat.toFixed(5),
+                    lon: +row.Lon.toFixed(5),
+                    speed: +row.Speed.toFixed(1),
+                    heading: +(row.Heading || 0).toFixed(1),
+                    mode: row.Mode || 'Parked',
+                    isJammed: false,
+                    isJammedV1: false,
+                    isLocked: row.Mode === 'Locked' || row.Mode === 'LOCKED',
+                    isTampered: false,
+                    geofenceViolating: false,
+                    clientCount: 0,
+                    geofence: null,
+                    routeType: 'hanoi'
+                };
+            }
+        });
+        res.json(result);
+    });
 });
 
 // ── V3 DB API: Xem bảng SecurityAlerts ──────────────────────────
