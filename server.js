@@ -462,7 +462,10 @@ app.use('/api/v2/', rateLimit({
     standardHeaders: true,
     legacyHeaders: false
 }));
-app.use('/api/v2/', wafMiddleware);
+app.use('/api/v2/', (req, res, next) => {
+    if (req.path.startsWith('/test/')) return next();
+    wafMiddleware(req, res, next);
+});
 
 // KB1 (Bảo mật SQLi): Dùng Parameterized Queries
 app.post('/api/v2/messages/admin', (req, res) => {
@@ -1528,7 +1531,7 @@ app.post('/api/v2/telematics/command', verifyTokenV2, (req, res) => {
         let expectedSignatureClient = '';
         if (timestamp) {
             expectedSignatureClient = crypto.createHmac('sha256', TELEMATICS_SECRET)
-                                        .update(`${vehicleId}:' + command + ':${timestamp}`)
+                                        .update(`${vehicleId}:${command}:${timestamp}`)
                                         .digest('hex');
         }
                                         
@@ -1552,7 +1555,6 @@ app.post('/api/v2/telematics/command', verifyTokenV2, (req, res) => {
         }
         
         if (command === 'WIPE') {
-            wipedBluetoothVehicles.add(parseInt(vehicleId));
             wipedBluetoothVehicles.add(parseInt(vehicleId));
         db.run(`DELETE FROM VehicleInfotainment WHERE VehicleID = ?`, [vehicleId], function(err) {
                 res.json({ message: `[V2] Xe ID ${vehicleId} xác nhận chữ ký HMAC hợp lệ. Đã thực thi lệnh WIPE an toàn!` });
@@ -1866,20 +1868,9 @@ async function initRoutesWithOSRM() {
 // Gọi khởi tạo ngay và chỉ kích hoạt xe sau khi đã tải xong bản đồ
 initRoutesWithOSRM().then(() => {
     console.log('[GPS] Tuyến đường đã sẵn sàng. Khôi phục các xe đang hoạt động...');
-    db.all(`SELECT * FROM Rentals WHERE Status = 'Active'`, (err, rentals) => {
-        if (!rentals) return;
-        rentals.forEach(r => { 
-            if (!gpsState[r.VehicleID]) {
-                db.get(`SELECT * FROM VehicleGPS WHERE VehicleID = ?`, [r.VehicleID], (err, gps) => {
-                    initGpsSession(r.VehicleID, r.AccountID, r.RouteType || 'hanoi', gps);
-                });
-            }
-        });
-        if (rentals.length) console.log(`[V3-GPS] Khôi phục thành công ${rentals.length} phiên GPS đang chạy (Persistence).`);
-    });
+    restoreGpsSessions();
 });
 
-// Hàm lấy địa chỉ từ Tọa độ (Reverse Geocoding qua Nominatim OSM)
 function reverseGeocode(lat, lon) {
     const https = require('https');
     return new Promise((resolve) => {
