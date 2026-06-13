@@ -935,7 +935,7 @@
                     <button class="ctrl-btn ctrl-btn-blue" onclick="sendRemoteCmd('RESTART')">Khởi động lại TB</button>
                     <button class="ctrl-btn ctrl-btn-red" onclick="sendRemoteCmd('LOCK')" style="margin-bottom:0;">Khóa xe</button>
                 </div>
-                <div class="geofence-row" id="owner-geofence-row">
+                <div class="geofence-row" id="owner-geofence-row" style="display: none;">
                     <input type="number" id="geofence-r" class="geofence-input" value="15" min="0.5" max="50" step="0.5">
                     <span style="font-size:12px;color:var(--text-2);">km</span>
                     <button class="ctrl-btn ctrl-btn-blue" style="white-space:nowrap;margin-bottom:0;padding:7px 10px;" onclick="setGeofence()">Cập nhật vùng</button>
@@ -1074,7 +1074,7 @@
             <div class="form-group"><label>Xác nhận mật khẩu mới</label><input type="password" id="pwd-confirm-in"></div>
             <button class="btn-save" onclick="changeUserPassword()">Cập nhật mật khẩu</button>
         </div>
-        <div class="panel">
+        <div class="panel" style="display: none;">
             <div class="panel-title">Xác thực 2 lớp (OTP)</div>
             <p style="color:var(--text-2);font-size:13px;line-height:1.6;margin-bottom:12px;">Kích hoạt xác thực 2 lớp (MFA TOTP) bảo vệ tài khoản chống tấn công Brute Force.</p>
             <button class="btn-save" id="mfa-action-btn" onclick="setupTwoFactor()" style="width:auto;padding:10px 20px;">Kích hoạt OTP</button>
@@ -1187,7 +1187,7 @@
                     </select>
                 </div>
                 <!-- Route Setting Options -->
-                <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px;">
+                <div style="margin-top:15px; border-top:1px solid var(--border); padding-top:15px; display: none;">
                     <div style="font-size:14px; font-weight:700; margin-bottom:8px;">Lộ trình giám sát GPS</div>
                     <p style="font-size:12px; color:var(--text-2); margin-bottom:10px;">Chọn lộ trình di chuyển mong muốn cho xe (mô phỏng theo thời gian thực):</p>
                     <select id="book-route-type" style="width:100%; padding:10px; border-radius:6px; border:1px solid var(--border); background:var(--bg); color:var(--text); font-size:14px;">
@@ -1689,7 +1689,7 @@ function initGpsView() {
     
     if (isOwned) {
         if (ctrlPair) ctrlPair.style.display = 'flex';
-        if (geofenceRow) geofenceRow.style.display = 'flex';
+        if (geofenceRow) geofenceRow.style.display = 'none';
         if (lockEngBtn) lockEngBtn.style.display = 'block';
         if (returnCarBtn) returnCarBtn.style.display = 'none';
     } else {
@@ -1933,7 +1933,7 @@ function handleGpsData(data) {
     document.getElementById('gps-lat').textContent = lat?.toFixed(6)||'--';
     document.getElementById('gps-lon').textContent = lon?.toFixed(6)||'--';
     document.getElementById('gps-speed').textContent = (speed?.toFixed(1)||'--')+' km/h';
-    document.getElementById('gps-heading').textContent = (heading?.toFixed(0)||'--')+'&#176;';
+    document.getElementById('gps-heading').innerHTML = (heading?.toFixed(0)||'--')+'&deg;';
     document.getElementById('gps-waypoint').textContent = currentWaypoint||'--';
     document.getElementById('gps-nextwp').textContent = nextWaypoint||'--';
     if (routeProgress!=null) document.getElementById('route-progress-bar').style.width=(routeProgress*100)+'%';
@@ -2055,8 +2055,8 @@ function handleGpsData(data) {
 
 async function fetchInfotainment() {
     if (activeTrackingVehicle && myOwnedVehicle && activeTrackingVehicle.VehicleID === myOwnedVehicle.VehicleID) {
-        document.getElementById('smart-contacts').textContent = 'Xe ch?nh ch? - ch? hi?n th? tr?ng th?i gi?m s?t, kh?ng ??c d? li?u kh?ch thu?';
-        document.getElementById('smart-contacts-bt').textContent = activeTrackingVehicle.Status === 'Rented' ? '?ang c? kh?ch thu? k?t n?i' : 'Kh?ng c? kh?ch thu? k?t n?i';
+        document.getElementById('smart-contacts').textContent = 'Xe chính chủ - chỉ hiển thị trạng thái giám sát, không đọc dữ liệu khách thuê';
+        document.getElementById('smart-contacts-bt').textContent = activeTrackingVehicle.Status === 'Rented' ? 'Đang có khách thuê kết nối' : 'Không có khách thuê kết nối';
         return;
     }
     try {
