@@ -536,16 +536,6 @@
         .geofence-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
         .geofence-input { flex: 1; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; }
 
-        /* === TRIP LIMIT === */
-        .trip-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-        .trip-input-wrap { margin-bottom: 0; }
-        .trip-input-wrap label { font-size: 11px; color: var(--text-2); display: block; margin-bottom: 3px; }
-        .trip-input-wrap input { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-family: inherit; }
-        .trip-status-box {
-            display: none;
-            margin-top: 8px; padding: 10px; background: #fff7ed;
-            border: 1px solid #ffedd5; border-radius: 8px; font-size: 12px;
-        }
         #wifi-panel { display: none; }
 
         /* === SECTION 3: HISTORY === */
@@ -946,7 +936,7 @@
                     <button class="ctrl-btn ctrl-btn-red" onclick="sendRemoteCmd('LOCK')" style="margin-bottom:0;">Khóa xe</button>
                 </div>
                 <div class="geofence-row" id="owner-geofence-row">
-                    <input type="number" id="geofence-r" class="geofence-input" value="5" min="0.5" max="50" step="0.5">
+                    <input type="number" id="geofence-r" class="geofence-input" value="15" min="0.5" max="50" step="0.5">
                     <span style="font-size:12px;color:var(--text-2);">km</span>
                     <button class="ctrl-btn ctrl-btn-blue" style="white-space:nowrap;margin-bottom:0;padding:7px 10px;" onclick="setGeofence()">Cập nhật vùng</button>
                 </div>
@@ -955,33 +945,6 @@
 
 
                 <button class="ctrl-btn ctrl-btn-orange" id="return-car-btn" onclick="handleReturnCar()" style="margin-top:10px;">Trả xe & Xóa dữ liệu (VIPR)</button>
-            </div>
-
-            <!-- Trip Limit -->
-            <div class="panel" id="trip-limit-panel" style="border-color:rgba(234,88,12,0.3);">
-                <div class="panel-title" style="color:var(--orange);">Giới hạn chuyến đi</div>
-                <div style="font-size:12px;color:var(--text-2);margin-bottom:8px;line-height:1.5;">Giới hạn xe di chuyển từ điểm xuất phát đến điểm đến trong số phút giới hạn. Quá giờ hoặc vượt khoảng cách sẽ báo động.</div>
-                <div class="trip-grid" style="margin-bottom:8px;">
-                    <div class="trip-input-wrap"><label>Điểm đi</label><input type="text" id="trip-from-name" value="Ha Noi"></div>
-                    <div class="trip-input-wrap"><label>Điểm đến</label><input type="text" id="trip-to-name" value="Noi Bai"></div>
-                    <div class="trip-input-wrap"><label>Số phút</label><input type="number" id="trip-limit-min" value="10" min="1"></div>
-                    <div class="trip-input-wrap"><label>Bán kính (km)</label><input type="number" id="trip-limit-radius" value="15" min="1"></div>
-                </div>
-                <div style="display:flex;gap:6px;">
-                    <button class="ctrl-btn ctrl-btn-orange" style="flex:1;margin-bottom:0;" onclick="setTripLimit()">Thiết lập</button>
-                    <button class="ctrl-btn" style="margin-bottom:0;padding:7px 12px;" onclick="clearTripLimit()">Xóa bỏ</button>
-                </div>
-                <div id="trip-limit-status-box" class="trip-status-box">
-                    <div style="display:flex;justify-content:space-between;font-weight:700;">
-                        <span style="color:var(--orange);">Trạng thái:</span>
-                        <span id="trip-status-text" style="color:var(--orange);">Đang chạy...</span>
-                    </div>
-                    <div style="margin-top:6px;font-family:monospace;font-size:11px;color:var(--text-2);">
-                        <div>Tuyến: <span id="trip-route-display">--</span></div>
-                        <div>Còn: <span id="trip-time-remaining">--</span> phút</div>
-                        <div>Khoảng cách: <span id="trip-distance">--</span> km / <span id="trip-max-radius">--</span> km</div>
-                    </div>
-                </div>
             </div>
 
             <!-- Giai tri -->
@@ -1345,7 +1308,7 @@
                             <td style="color:var(--text-3); padding:4px 0; font-weight:600; text-align:left;">Bán kính cho phép:</td>
                             <td style="text-align:right; padding:4px 0;">
                                 <div style="display:inline-flex; align-items:center; gap:6px;">
-                                    <input type="number" id="modal-geofence-r" style="width:60px; padding:3px 6px; border:1px solid var(--border); border-radius:6px; font-size:11px; font-family:monospace; text-align:center;" value="5" min="0.5" max="50" step="0.5">
+                                    <input type="number" id="modal-geofence-r" style="width:60px; padding:3px 6px; border:1px solid var(--border); border-radius:6px; font-size:11px; font-family:monospace; text-align:center;" value="15" min="0.5" max="50" step="0.5">
                                     <span style="font-weight:600; color:var(--text-3);">km</span>
                                     <button class="map-btn" onclick="setGeofence()" style="padding:3px 8px; font-size:11px; font-weight:700; border-radius:6px;">Thiết lập</button>
                                 </div>
@@ -1723,19 +1686,16 @@ function initGpsView() {
     const geofenceRow = document.getElementById('owner-geofence-row');
     const lockEngBtn = document.getElementById('lock-engine-btn');
     const returnCarBtn = document.getElementById('return-car-btn');
-    const tripLimitPanel = document.getElementById('trip-limit-panel');
     
     if (isOwned) {
         if (ctrlPair) ctrlPair.style.display = 'flex';
         if (geofenceRow) geofenceRow.style.display = 'flex';
         if (lockEngBtn) lockEngBtn.style.display = 'block';
-        if (tripLimitPanel) tripLimitPanel.style.display = 'block';
         if (returnCarBtn) returnCarBtn.style.display = 'none';
     } else {
         if (ctrlPair) ctrlPair.style.display = 'none';
         if (geofenceRow) geofenceRow.style.display = 'none';
         if (lockEngBtn) lockEngBtn.style.display = 'none';
-        if (tripLimitPanel) tripLimitPanel.style.display = 'none';
         if (returnCarBtn) returnCarBtn.style.display = 'block';
     }
 
@@ -2043,25 +2003,6 @@ function handleGpsData(data) {
         }
     }
 
-    // Trip limit status
-    if (data.tripLimit) {
-        const tripBox = document.getElementById('trip-limit-status-box');
-        if (data.tripLimit.active) {
-            tripBox.style.display='block';
-            document.getElementById('trip-route-display').textContent = data.tripLimit.from+' > '+data.tripLimit.to;
-            document.getElementById('trip-time-remaining').textContent = data.tripLimit.timeRemainingMin?.toFixed(0)||'--';
-            document.getElementById('trip-distance').textContent = data.tripLimit.distance?.toFixed(2)||'--';
-            document.getElementById('trip-max-radius').textContent = data.tripLimit.maxRadius||'--';
-            const statusText = document.getElementById('trip-status-text');
-            if (data.tripLimit.violated) {
-                statusText.textContent = data.tripLimit.tripTimeExpired?'HẾT GIỜ!':'VƯỢT GIỚI HẠN!';
-                statusText.style.color='var(--red)';
-            } else {
-                statusText.textContent='Đang chạy...'; statusText.style.color='var(--green)';
-            }
-        }
-    }
-
     // Security events
     if (data.type==='HARDWARE_TAMPER') {
         const ov=document.getElementById('tamper-overlay'); if(ov) ov.style.display='flex';
@@ -2114,8 +2055,8 @@ function handleGpsData(data) {
 
 async function fetchInfotainment() {
     if (activeTrackingVehicle && myOwnedVehicle && activeTrackingVehicle.VehicleID === myOwnedVehicle.VehicleID) {
-        document.getElementById('smart-contacts').textContent = 'Không áp dụng (Xe chính chủ)';
-        document.getElementById('smart-contacts-bt').textContent = 'Không áp dụng (Xe chính chủ)';
+        document.getElementById('smart-contacts').textContent = 'Xe ch?nh ch? - ch? hi?n th? tr?ng th?i gi?m s?t, kh?ng ??c d? li?u kh?ch thu?';
+        document.getElementById('smart-contacts-bt').textContent = activeTrackingVehicle.Status === 'Rented' ? '?ang c? kh?ch thu? k?t n?i' : 'Kh?ng c? kh?ch thu? k?t n?i';
         return;
     }
     try {
@@ -2207,7 +2148,7 @@ async function sendRemoteCmd(cmd) {
 async function setGeofence() {
     if (!activeTrackingVehicle) return;
     const input = document.getElementById('modal-geofence-r') || document.getElementById('geofence-r');
-    const r = parseFloat(input.value) || 5;
+    const r = parseFloat(input.value) || 15;
     await sendRemoteCmd('SET_GEOFENCE:'+r);
 }
 async function lockEngine() {
@@ -2249,40 +2190,6 @@ async function lockEngine() {
         showToast(data.error || 'Lỗi khóa động cơ', 'error');
     }
 }
-async function setTripLimit() {
-    if (!activeTrackingVehicle) { alert('Khong co xe dang theo doi.'); return; }
-    const fromVal = document.getElementById('trip-from-name').value;
-    const toVal = document.getElementById('trip-to-name').value;
-    const limitMin = parseInt(document.getElementById('trip-limit-min').value)||10;
-    const radius = parseFloat(document.getElementById('trip-limit-radius').value)||15;
-    const vehicleId = activeTrackingVehicle.VehicleID;
-    const res = await fetch('/api/v2/vehicles/set-trip-limit', {
-        method:'POST', credentials:'include',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-            vehicleId,
-            fromName: fromVal,
-            toName: toVal,
-            limitMinutes: limitMin,
-            radiusKm: radius
-        })
-    });
-    const data = await res.json();
-    printLog('RES', JSON.stringify(data).slice(0,80), 'console-box-gps');
-    if (res.ok) { document.getElementById('trip-limit-status-box').style.display='block'; }
-}
-async function clearTripLimit() {
-    if (!activeTrackingVehicle) return;
-    await fetch('/api/v2/vehicles/clear-trip-limit', {
-        method:'POST', credentials:'include',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({vehicleId: activeTrackingVehicle.VehicleID})
-    });
-    document.getElementById('trip-limit-status-box').style.display='none';
-}
-
-
-
 // ============================================================
 // RECOVERED JS
 // ============================================================
@@ -2580,7 +2487,7 @@ async function fetchMyRentalStatus() {
             const data = await res.json();
             if(data.RentalID) {
                 myActiveRental = data;
-                if (!activeTrackingVehicle || activeTrackingVehicle.VehicleID !== data.VehicleID) {
+                if (!activeTrackingVehicle) {
                     switchActiveTrackingVehicle(data);
                 }
                 document.getElementById('link-rented').style.display = 'inline-block';

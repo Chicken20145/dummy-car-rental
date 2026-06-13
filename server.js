@@ -1384,7 +1384,7 @@ app.post('/api/v1/rentals/terminate', (req, res) => {
     db.get(`SELECT VehicleID FROM Rentals WHERE RentalID = ?`, [rentalId], (err, row) => {
         if (err || !row) return res.status(404).send("[V1] Hợp đồng không tồn tại.");
         const vehicleId = row.VehicleID;
-        db.run(`UPDATE Rentals SET Status = 'Terminated' WHERE RentalID = ?`, [rentalId], function(err) {
+        db.run(`UPDATE Rentals SET Status = 'Completed' WHERE RentalID = ?`, [rentalId], function(err) {
             if (err) return res.status(500).send("Lỗi DB");
             db.run(`UPDATE Vehicles SET Status = 'Available' WHERE VehicleID = ?`, [vehicleId], (err) => {
                 terminateGpsSession(vehicleId);
@@ -1403,7 +1403,7 @@ app.post('/api/v2/rentals/terminate', verifyTokenV2, (req, res) => {
         
         const vehicleId = row.VehicleID;
         
-        db.run(`UPDATE Rentals SET Status = 'Terminated' WHERE RentalID = ?`, [rentalId], function(err) {
+        db.run(`UPDATE Rentals SET Status = 'Completed' WHERE RentalID = ?`, [rentalId], function(err) {
             if (err) return res.status(500).send("Lỗi DB");
             
             // Cập nhật trạng thái xe về Available
@@ -2070,7 +2070,7 @@ async function initGpsSession(vehicleId, accountId, routeType = 'hanoi', restore
         route: route,
         isLocked: isLockedInitial, isTampered: false,
         mode: initialMode,
-        geofence: { lat: route[0].lat, lon: route[0].lon, radiusKm: 5.0 }, // Dynamic geofence using route start point
+        geofence: { lat: route[0].lat, lon: route[0].lon, radiusKm: 15.0 }, // Dynamic geofence using route start point
         geofenceViolating: false, lastAlertTime: 0,
         path: [{ lat: startPt.lat, lon: startPt.lon, ts: Date.now() }],
         clients: new Set(),
@@ -2287,70 +2287,20 @@ function startGpsLoop(vehicleId) {
             db.run(`UPDATE VehicleGPS SET Lat=?, Lon=?, Speed=?, Heading=?, Mode=?, Timestamp=?, Address=?, LastReported='Vừa xong' WHERE VehicleID=?`,
                 [+st.lat.toFixed(6), +st.lon.toFixed(6), +st.speed.toFixed(1), +st.heading.toFixed(1), 'GPS', new Date().toISOString(), locName, vehicleId]);
 
-            if (st.tripLimit && st.tripLimit.enabled) {
-                const now = Date.now();
-                const tripDistKm = haversineKm(st.tripLimit.fromLat, st.tripLimit.fromLon, st.lat, st.lon);
-                const tripOutsideRadius = tripDistKm > st.tripLimit.radiusKm;
-                const tripTimeExpired = now > st.tripLimit.endsAt;
-                const remainingMs = Math.max(0, st.tripLimit.endsAt - now);
-                const remainingMin = Math.ceil(remainingMs / 60000);
-                
-                if ((tripOutsideRadius || tripTimeExpired) && !st.tripLimit.violated) {
-                    st.tripLimit.violated = true;
-                }
-                
-                if (st.tripLimit.violated && (now - st.tripLimit.lastTripAlertTime > 30000)) {
-                    st.tripLimit.lastTripAlertTime = now;
-                    const reason = tripTimeExpired 
-                        ? `⏰ Hết thời gian hành trình (${st.tripLimit.limitMinutes} phút)`
-                        : `📍 Vượt bán kính cho phép ${st.tripLimit.radiusKm}km (cách điểm xuất phát ${tripDistKm.toFixed(2)}km)`;
-                    db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
-                        [vehicleId, st.accountId, 'GEOFENCE_VIOLATION',
-                         `🚨 TRIP VIOLATION - Xe #${vehicleId}: ${reason} | Từ "${st.tripLimit.fromName}" → "${st.tripLimit.toName}"`,
-                         'CRITICAL']);
-                }
-
-                eventData = {
-                    type: 'GPS', vehicleId: st.vehicleId,
-                    encrypted, dekWrappedForServer: st.dekWrappedForServer,
-                    lat: st.lat, lon: st.lon, speed: st.speed, heading: st.heading,
-                    outsideGeofence: outside, distanceFromCenter: dist,
-                    geofence: st.geofence, pathPoints: st.path.slice(-25),
-                    currentWaypoint: currentWp?.name || 'Trên đường',
-                    nextWaypoint: (route[(st.routeIndex + 1) % route.length])?.name || '',
-                    routeIndex: st.routeIndex, routeTotal: route.length - 1,
-                    routeProgress: (route.length > 1 ? st.routeIndex / (route.length - 1) : 0),
-                    routeType: st.routeType,
-                    tripLimit: {
-                        enabled: true,
-                        fromName: st.tripLimit.fromName,
-                        toName: st.tripLimit.toName,
-                        radiusKm: st.tripLimit.radiusKm,
-                        limitMinutes: st.tripLimit.limitMinutes,
-                        remainingMin,
-                        tripDistKm: +tripDistKm.toFixed(2),
-                        violated: st.tripLimit.violated,
-                        tripTimeExpired,
-                        tripOutsideRadius
-                    },
-                    ts: Date.now()
-                };
-            } else {
-                eventData = {
-                    type: 'GPS', vehicleId: st.vehicleId,
-                    encrypted, dekWrappedForServer: st.dekWrappedForServer,
-                    lat: st.lat, lon: st.lon, speed: st.speed, heading: st.heading,
-                    outsideGeofence: outside, distanceFromCenter: dist,
-                    geofence: st.geofence, pathPoints: st.path.slice(-25),
-                    currentWaypoint: currentWp?.name || 'Trên đường',
-                    nextWaypoint: (route[(st.routeIndex + 1) % route.length])?.name || '',
-                    routeIndex: st.routeIndex,
-                    routeTotal: route.length - 1,
-                    routeProgress: (route.length > 1 ? st.routeIndex / (route.length - 1) : 0),
-                    routeType: st.routeType,
-                    ts: Date.now()
-                };
-            }
+            eventData = {
+                type: 'GPS', vehicleId: st.vehicleId,
+                encrypted, dekWrappedForServer: st.dekWrappedForServer,
+                lat: st.lat, lon: st.lon, speed: st.speed, heading: st.heading,
+                outsideGeofence: outside, distanceFromCenter: dist,
+                geofence: st.geofence, pathPoints: st.path.slice(-25),
+                currentWaypoint: currentWp?.name || 'Tren duong',
+                nextWaypoint: (route[(st.routeIndex + 1) % route.length])?.name || '',
+                routeIndex: st.routeIndex,
+                routeTotal: route.length - 1,
+                routeProgress: (route.length > 1 ? st.routeIndex / (route.length - 1) : 0),
+                routeType: st.routeType,
+                ts: Date.now()
+            };
 
             pushSSE(vehicleId, eventData);
         });
@@ -2482,7 +2432,7 @@ app.post('/api/v2/vehicles/set-geofence', verifyTokenV2, (req, res) => {
     function setGeofenceLogic() {
         const s = gpsState[vehicleId];
         if (!s) return res.status(404).json({ error: 'Phiên GPS xe không hoạt động.' });
-        s.geofence = { lat: s.lat, lon: s.lon, radiusKm: Math.max(0.5, Math.min(50, parseFloat(radiusKm) || 5)) };
+        s.geofence = { lat: s.lat, lon: s.lon, radiusKm: Math.max(0.5, Math.min(50, parseFloat(radiusKm) || 15)) };
         s.geofenceViolating = false;
         db.run(`INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)`,
             [vehicleId, s.accountId, 'GEOFENCE_SET',
@@ -2787,56 +2737,6 @@ app.post('/api/v2/vehicles/force-report', async (req, res) => {
 });
 
 // ── V3 API: Đặt giới hạn hành trình (Route Boundary) ─────────────────
-// Giới hạn xe chỉ được di chuyển từ điểm xuất phút đến bán kính nhất định trong thời gian X phút
-app.post('/api/v2/vehicles/set-trip-limit', verifyTokenV2, (req, res) => {
-    const { vehicleId, fromLat, fromLon, fromName, toLat, toLon, toName, limitMinutes, radiusKm } = req.body;
-
-    db.get(`SELECT OwnerID FROM Vehicles WHERE VehicleID = ?`, [vehicleId], (err, row) => {
-        if (err) return res.status(500).json({ error: err.message });
-        if (!row) return res.status(404).json({ error: 'Vehicle not found.' });
-
-        if (req.user.AccountID !== 1 && req.user.AccountID !== row.OwnerID) {
-            return res.status(403).json({ error: 'Forbidden: Bạn không phải chủ sở hữu xe này.' });
-        }
-
-        setTripLimitLogic();
-    });
-
-    function setTripLimitLogic() {
-        const s = gpsState[vehicleId];
-        if (!s) return res.status(404).json({ error: 'Phiên GPS không hoạt động cho xe này.' });
-        if (!limitMinutes || limitMinutes <= 0) return res.status(400).json({ error: 'Thời gian giới hạn không hợp lệ.' });
-
-        const now = Date.now();
-        s.tripLimit = {
-            enabled: true,
-            fromLat: fromLat || s.lat,
-            fromLon: fromLon || s.lon,
-            fromName: fromName || 'Điểm xuất phát',
-            toLat: toLat || null,
-            toLon: toLon || null,
-            toName: toName || 'Điểm đến',
-            limitMinutes: parseInt(limitMinutes),
-            radiusKm: parseFloat(radiusKm) || 15,  // Bán kính vùng hành trình cho phép (km)
-            startedAt: now,
-            endsAt: now + parseInt(limitMinutes) * 60 * 1000,
-            violated: false,
-            lastTripAlertTime: 0
-        };
-
-        db.run('INSERT INTO SecurityAlerts (VehicleID, AccountID, Type, Message, Severity) VALUES (?,?,?,?,?)',
-            [vehicleId, s.accountId, 'GEOFENCE_SET',
-             `Đặt giới hạn hành trình Xe #${vehicleId}: Từ "${s.tripLimit.fromName}" → "${s.tripLimit.toName}" | Bán kính: ${s.tripLimit.radiusKm}km | Thời gian: ${limitMinutes} phút`,
-             'INFO']);
-
-        res.json({
-            success: true,
-            vehicleId,
-            message: `Đã đặt giới hạn hành trình Xe #${vehicleId} thành công.`
-        });
-    }
-});
-
 // ── V3 API: Trạng thái GPS tất cả xe kèm thông tin giới hạn hành trình ──
 // (Cập nhật lại endpoint gps-all cũ)
 
