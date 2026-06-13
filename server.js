@@ -261,68 +261,54 @@ const resetDatabase = () => {
                 ('admin', 'admin', '${adminHash}', 'Admin', 'Nguyen Van Admin', '0901234567', 'admin@rentalshield.vn', 'iPhone 15 Pro Max'),
                 ('user1', 'user1', '${userHashes.user1}', 'User', 'Tran Thi Thu', '0912345678', 'thu@gmail.com', 'iPhone 13'),
                 ('user2', 'user2', '${userHashes.user2}', 'User', 'Le Van Hung', '0923456789', 'hung@gmail.com', 'Samsung Galaxy S24 Ultra'),
-                ('user3', 'user3', '${userHashes.user3}', 'User', 'Nguyen Van Ba', '0934567890', 'ba@gmail.com', 'iPhone 14'),
-                ('user4', 'user4', '${userHashes.user4}', 'User', 'Pham Thi Bon', '0945678901', 'bon@gmail.com', 'Samsung Galaxy S23'),
-                ('user5', 'user5', '${userHashes.user5}', 'User', 'Vu Van Nam', '0956789012', 'nam@gmail.com', 'iPhone 13'),
-                ('user6', 'user6', '${userHashes.user6}', 'User', 'Hoang Thi Sau', '0967890123', 'sau@gmail.com', 'Google Pixel 8'),
-                ('user7', 'user7', '${userHashes.user7}', 'User', 'Ngo Van Bay', '0978901234', 'bay@gmail.com', 'iPhone 15'),
-                ('user8', 'user8', '${userHashes.user8}', 'User', 'Do Thi Tam', '0989012345', 'tam@gmail.com', 'Samsung Galaxy S24 Ultra'),
-                ('user9', 'user9', '${userHashes.user9}', 'User', 'Bui Van Chin', '0990123456', 'chin@gmail.com', 'Xiaomi 14'),
-                ('user10', 'user10', '${userHashes.user10}', 'User', 'Dang Thi Muoi', '0909090909', 'muoi@gmail.com', 'iPhone 15 Pro Max');
+                ('user3', 'user3', '${userHashes.user3}', 'User', 'Nguyen Van Ba', '0934567890', 'ba@gmail.com', 'iPhone 14');
 
             INSERT INTO VehicleCategories (Name, Icon) VALUES ('Sedan', 'sedan'), ('SUV', 'suv'), ('Pickup', 'pickup'), ('Electric', 'electric'), ('Luxury', 'luxury');
 
             INSERT INTO Vehicles (LicensePlate, Model, Status, ImageURL, OwnerID) VALUES 
-                ('29A-11111', 'Toyota Vios', 'Rented', 'toyota_vios.png', 3),
+                ('29A-11111', 'Toyota Vios', 'Available', 'toyota_vios.png', 3),
                 ('30F-22222', 'Tesla Model Y', 'Rented', 'tesla_modely.png', NULL),
                 ('30H-33333', 'BMW 320i', 'Rented', 'bmw_320i.png', NULL),
-                ('43A-44444', 'Honda Civic', 'Rented', 'honda_civic.png', 2),
+                ('43A-44444', 'Honda Civic', 'Available', 'honda_civic.png', 2),
                 ('51G-55555', 'Hyundai SantaFe', 'Rented', 'hyundai_santafe.png', NULL),
-                ('51H-66666', 'Ford Ranger', 'Rented', 'ford_ranger.png', 1),
-                ('29C-77777', 'VinFast VF8', 'Rented', 'vinfast_vf8.png', NULL),
-                ('65A-88888', 'Kia Seltos', 'Rented', 'kia_seltos.png', NULL),
-                ('30K-99999', 'Mercedes C300', 'Rented', 'mercedes_c300.png', NULL),
-                ('51K-10101', 'Mazda 3', 'Rented', 'mazda_3.png', NULL);
+                ('51H-66666', 'Ford Ranger', 'Available', 'ford_ranger.png', 1),
+                ('29C-77777', 'VinFast VF8', 'Available', 'vinfast_vf8.png', NULL),
+                ('65A-88888', 'Kia Seltos', 'Available', 'kia_seltos.png', NULL),
+                ('30K-99999', 'Mercedes C300', 'Available', 'mercedes_c300.png', NULL),
+                ('51K-10101', 'Mazda 3', 'Available', 'mazda_3.png', NULL);
 
             INSERT INTO Rentals (VehicleID, AccountID, Status, RouteType) VALUES 
-                (1, 2, 'Active', 'hanoi'),
                 (2, 3, 'Active', 'north_vietnam'),
-                (3, 4, 'Active', 'haiphong'),
-                (4, 5, 'Active', 'airport'),
-                (5, 6, 'Active', 'danang'),
-                (6, 7, 'Active', 'nhatrang'),
-                (7, 8, 'Active', 'hcmc'),
-                (8, 9, 'Active', 'west'),
-                (9, 10, 'Active', 'east'),
-                (10, 11, 'Active', 'cantho');
+                (3, 2, 'Active', 'haiphong'),
+                (5, 4, 'Active', 'danang');
 
             INSERT INTO UserDocuments (AccountID, LicenseData, IsEncrypted, LicenseNumber, ImageURL, VerifiedStatus) 
                 SELECT AccountID, PasswordHash, 0, 'B2-' || printf('%06d', AccountID * 111111), '', 'verified'
                 FROM Accounts WHERE Role = 'User';
 
             INSERT INTO VehicleGPS (VehicleID, Lat, Lon, Speed, Mode, Address, LastReported) VALUES 
-                (1, 21.0285, 105.8542, 40, 'Moving', 'Đường Hùng Vương, Ba Đình, Hà Nội', 'Vừa xong (Live)'),
+                (1, 21.0285, 105.8542, 0, 'Parked', 'Gara VNCars Hoàn Kiếm (Trong nhà)', 'Cập nhật mỗi 1 giờ'),
                 (2, 21.0333, 105.8500, 45, 'Moving', 'Đường Thanh Niên, Quận Tây Hồ, Hà Nội', 'Vừa xong (Live)'),
                 (3, 20.8449, 106.6881, 60, 'Moving', 'Đường Lạch Tray, Quận Ngô Quyền, Hải Phòng', 'Vừa xong (Live)'),
-                (4, 21.2187, 105.8041, 50, 'Moving', 'Sân bay Nội Bài, Hà Nội', 'Vừa xong (Live)'),
+                (4, 16.0471, 108.2068, 0, 'Parked', 'Gara VNCars Hải Châu (Trong nhà)', 'Cập nhật mỗi 1 giờ'),
                 (5, 16.0544, 108.2022, 50, 'Moving', 'Đường Võ Nguyên Giáp, Quận Sơn Trà, Đà Nẵng', 'Vừa xong (Live)'),
-                (6, 12.2388, 109.1967, 40, 'Moving', 'Đường Trần Phú, Nha Trang', 'Vừa xong (Live)'),
-                (7, 10.7626, 106.6602, 30, 'Moving', 'Đường Nguyễn Huệ, Quận 1, TP.HCM', 'Vừa xong (Live)'),
-                (8, 10.8231, 106.6297, 45, 'Moving', 'Đường Cộng Hòa, Quận Tân Bình, TP.HCM', 'Vừa xong (Live)'),
-                (9, 10.0452, 105.7469, 40, 'Moving', 'Bến Ninh Kiều, Cần Thơ', 'Vừa xong (Live)'),
-                (10, 10.0234, 105.7500, 45, 'Moving', 'Đường 30/4, Cái Răng, Cần Thơ', 'Vừa xong (Live)');
+                (6, 12.2388, 109.1967, 0, 'Parked', 'Gara VNCars Nha Trang (Trong nhà)', 'Cập nhật mỗi 1 giờ'),
+                (7, 10.7626, 106.6602, 0, 'Parked', 'Gara VNCars Quận 1 (Trong nhà)', 'Cập nhật mỗi 1 giờ'),
+                (8, 10.8231, 106.6297, 0, 'Parked', 'Gara VNCars Tân Bình (Trong nhà)', 'Cập nhật mỗi 1 giờ'),
+                (9, 10.0452, 105.7469, 0, 'Parked', 'Gara VNCars Ninh Kiều (Trong nhà)', 'Cập nhật mỗi 1 giờ'),
+                (10, 10.0234, 105.7500, 0, 'Parked', 'Gara VNCars Cái Răng (Trong nhà)', 'Cập nhật mỗi 1 giờ');
 
             INSERT INTO VehicleInfotainment (VehicleID, SyncedContacts, GPSHistory, ActiveBluetoothDevice) VALUES 
-                (1, 'Lưu vết Khách cũ: Công ty (0243333)', 'Nhật ký GPS: Bãi đỗ xe', 'iPhone 15 Pro Max (Đang kết nối)'),
+                (1, 'Lưu vết Khách cũ: Công ty (0243333)', 'Nhật ký GPS: Bãi đỗ xe', 'Ngắt kết nối (Offline)'),
                 (2, 'Danh bạ user2: Mẹ (0901234567), Vợ (0911223344)', 'Nhật ký GPS: Cầu Giấy -> Hồ Gươm', 'Samsung Galaxy S24 Ultra (Đang kết nối)'),
                 (3, 'Danh bạ user1: Boss (0988888888)', 'Nhật ký GPS: Đồ Sơn -> Lạch Tray', 'iPhone 13 (Đang kết nối)'),
-                (4, 'Lưu vết Khách cũ: Gara (09121212)', 'Nhật ký GPS: Sân bay Đà Nẵng', 'Samsung Galaxy S24 Ultra (Đang kết nối)'),
-                (5, 'Danh bạ user1: Đối tác (09333333)', 'Nhật ký GPS: Cầu Rồng -> Hội An', 'iPhone 13 (Đang kết nối)'),
-                (6, 'Lưu vết Khách cũ: Vợ (09222222)', 'Nhật ký GPS: Vinpearl Nha Trang', 'iPhone 15 Pro Max (Đang kết nối)'),
-                (7, 'Danh bạ user1: Bạn thân (0912345678)', 'Nhật ký GPS: Q1 -> Landmark 81', 'iPhone 13 (Đang kết nối)'),
-                (8, 'Danh bạ user2: Công ty (08888888)', 'Nhật ký GPS: Tân Sơn Nhất -> Q3', 'Samsung Galaxy S24 Ultra (Đang kết nối)'),
-                (9, 'Lưu vết Khách cũ: Nhà hàng (0292222)', 'Nhật ký GPS: Bến Ninh Kiều', 'iPhone 15 Pro Max (Đang kết nối)'),
-                (10, 'Lưu vết Khách cũ: Mẹ (09999999)', 'Nhật ký GPS: Cái Răng -> Vĩnh Long', 'Samsung Galaxy S24 Ultra (Đang kết nối)');
+                (4, 'Lưu vết Khách cũ: Gara (09121212)', 'Nhật ký GPS: Sân bay Đà Nẵng', 'Ngắt kết nối (Offline)'),
+                (5, 'Danh bạ user3: Đối tác (09333333)', 'Nhật ký GPS: Cầu Rồng -> Hội An', 'iPhone 13 (Đang kết nối)'),
+                (6, 'Lưu vết Khách cũ: Vợ (09222222)', 'Nhật ký GPS: Vinpearl Nha Trang', 'Ngắt kết nối (Offline)'),
+                (7, 'Lưu vết Khách cũ: Bạn thân (0912345678)', 'Nhật ký GPS: Q1 -> Landmark 81', 'Ngắt kết nối (Offline)'),
+                (8, 'Lưu vết Khách cũ: Công ty (08888888)', 'Nhật ký GPS: Tân Sơn Nhất -> Q3', 'Ngắt kết nối (Offline)'),
+                (9, 'Lưu vết Khách cũ: Nhà hàng (0292222)', 'Nhật ký GPS: Bến Ninh Kiều', 'Ngắt kết nối (Offline)'),
+                (10, 'Lưu vết Khách cũ: Mẹ (09999999)', 'Nhật ký GPS: Cái Răng -> Vĩnh Long', 'Ngắt kết nối (Offline)');
             PRAGMA foreign_keys = ON;
         `;
         db.exec(sql, (err) => {
